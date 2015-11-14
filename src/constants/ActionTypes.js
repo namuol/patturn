@@ -1,3 +1,4 @@
 export const START_DRAWING_LINE = 'START_DRAWING_LINE';
 export const DRAW_LINE = 'DRAW_LINE';
 export const STOP_DRAWING_LINE = 'STOP_DRAWING_LINE';
+export const RESIZE_SCREEN = 'RESIZE_SCREEN';

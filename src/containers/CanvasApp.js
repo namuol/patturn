@@ -25,6 +25,7 @@ class CanvasApp extends React.Component {
   render () {
     const {
       canvas,
+      screen,
       computedStyles,
       dispatch,
     } = this.props;
@@ -52,8 +53,10 @@ class CanvasApp extends React.Component {
         <Canvas
           ref="canvas"
           canvas={canvas}
-          height={400}
-          width={400}
+          height={screen.get('height')}
+          width={screen.get('width')}
+          tileWidth={200}
+          tileHeight={200}
           {...boundActions}
         />
       </div>
@@ -72,7 +75,8 @@ CanvasApp.propTypes = {
 
 function select (state) {
   return {
-    canvas: state.canvas
+    canvas: state.canvas,
+    screen: state.screen,
   };
 }
 

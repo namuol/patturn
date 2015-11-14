@@ -1,4 +1,5 @@
 import React, { Component, PropTypes } from 'react';
+import Immutable from 'immutable';
 import { findDOMNode } from 'react-dom';
 import Seamstress from 'react-seamstress';
 
@@ -8,20 +9,16 @@ const seamstressConfig = {
   styles: {
     backgroundColor: 'white',
     cursor: 'crosshair',
-    // width: p => p.width,
-    // height: p => p.height,
+    width: p => p.width,
+    height: p => p.height,
   },
   getStyleState: ({props}) => {
     return {
-      // width: props.width,
-      // height: props.height,
+      width: props.width,
+      height: props.height,
     };
   },
 };
-
-const TRANSFORM = new Transform().translate(200,200).rotate(90).translate(-200,-200);
-const TRANSFORM_2 = new Transform().translate(200,200).rotate(180).translate(-200,-200);
-const TRANSFORM_3 = new Transform().translate(200,200).rotate(270).translate(-200,-200);
 
 function Canvas (props) {
   const {
@@ -29,10 +26,33 @@ function Canvas (props) {
 
     canvas,
 
+    tileWidth,
+    tileHeight,
+
     width,
     height,
     computedStyles,
   } = props;
+
+  const tile = [
+    new Transform(),
+    new Transform().translate(tileWidth/2,tileHeight/2).rotate(90).translate(-tileWidth/2,-tileHeight/2),
+    new Transform().translate(tileWidth/2,tileHeight/2).rotate(180).translate(-tileWidth/2,-tileHeight/2),
+    new Transform().translate(tileWidth/2,tileHeight/2).rotate(270).translate(-tileWidth/2,-tileHeight/2),
+  ].map((transform, tdx) => {
+    return canvas.get('lines').map((points, idx) => {
+      return <Shape
+        key={idx}
+        stroke={'#000'}
+        strokeWidth={2}
+        transform={transform}
+        d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
+      />;
+    });
+  });
+
+  const columnCount = Math.ceil(width/tileWidth) + 1;
+  const rowCount = Math.ceil(height/tileHeight);
 
   return (
     <div
@@ -48,43 +68,17 @@ function Canvas (props) {
         width={width}
         height={height}
       >
-        <Group x={0} y={0}>
-          {canvas.get('lines').map((points, idx) => {
-            return <Shape
-              key={idx}
-              stroke={'#000'}
-              strokeWidth={2}
-              d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
-            />;
-          })}
-          {canvas.get('lines').map((points, idx) => {
-            return <Shape
-              key={idx+'t'}
-              transform={TRANSFORM}
-              stroke={'#000'}
-              strokeWidth={2}
-              d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
-            />;
-          })}
-          {canvas.get('lines').map((points, idx) => {
-            return <Shape
-              key={idx+'t'}
-              transform={TRANSFORM_2}
-              stroke={'#000'}
-              strokeWidth={2}
-              d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
-            />;
-          })}
-          {canvas.get('lines').map((points, idx) => {
-            return <Shape
-              key={idx+'t'}
-              transform={TRANSFORM_3}
-              stroke={'#000'}
-              strokeWidth={2}
-              d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
-            />;
-          })}
-        </Group>
+        {Immutable.Range(0,columnCount*rowCount).map((num) => {
+          const col = num % columnCount;
+          const row = Math.floor(num / columnCount);
+          const xOffset = (row % 2) * tileWidth / 2;
+
+          return (
+            <Group x={col*tileWidth - xOffset} y={row*tileHeight}>
+              {tile}
+            </Group>
+          );
+        })}
       </Surface>
     </div>
   );

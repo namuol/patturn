@@ -11,7 +11,7 @@ const defaultState = Immutable.fromJS({
   lines: [],
 });
 
-export default function canvas(state = defaultState, action) {
+export default function canvas (state=defaultState, action) {
   const { x, y } = action;
   
   switch (action.type) {
