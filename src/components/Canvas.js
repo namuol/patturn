@@ -19,6 +19,10 @@ const seamstressConfig = {
   },
 };
 
+const TRANSFORM = new Transform().translate(200,200).rotate(90).translate(-200,-200);
+const TRANSFORM_2 = new Transform().translate(200,200).rotate(180).translate(-200,-200);
+const TRANSFORM_3 = new Transform().translate(200,200).rotate(270).translate(-200,-200);
+
 function Canvas (props) {
   const {
     startDrawingLine,
@@ -48,6 +52,33 @@ function Canvas (props) {
           {canvas.get('lines').map((points, idx) => {
             return <Shape
               key={idx}
+              stroke={'#000'}
+              strokeWidth={2}
+              d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
+            />;
+          })}
+          {canvas.get('lines').map((points, idx) => {
+            return <Shape
+              key={idx+'t'}
+              transform={TRANSFORM}
+              stroke={'#000'}
+              strokeWidth={2}
+              d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
+            />;
+          })}
+          {canvas.get('lines').map((points, idx) => {
+            return <Shape
+              key={idx+'t'}
+              transform={TRANSFORM_2}
+              stroke={'#000'}
+              strokeWidth={2}
+              d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
+            />;
+          })}
+          {canvas.get('lines').map((points, idx) => {
+            return <Shape
+              key={idx+'t'}
+              transform={TRANSFORM_3}
               stroke={'#000'}
               strokeWidth={2}
               d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
