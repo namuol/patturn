@@ -56,7 +56,7 @@ class CanvasApp extends React.Component {
           height={screen.get('height')}
           width={screen.get('width')}
           tileWidth={200}
-          tileHeight={200}
+          tileHeight={(Math.sqrt(3)/2)*200}
           {...boundActions}
         />
       </div>

@@ -3,6 +3,8 @@ import Immutable from 'immutable';
 import { findDOMNode } from 'react-dom';
 import Seamstress from 'react-seamstress';
 
+import WallpaperGroups from '../utils/WallpaperGroups';
+
 import { Group, Shape, Surface, Transform } from 'react-art';
 
 const seamstressConfig = {
@@ -34,12 +36,9 @@ function Canvas (props) {
     computedStyles,
   } = props;
 
-  const tile = [
-    new Transform(),
-    new Transform().translate(tileWidth/2,tileHeight/2).rotate(90).translate(-tileWidth/2,-tileHeight/2),
-    new Transform().translate(tileWidth/2,tileHeight/2).rotate(180).translate(-tileWidth/2,-tileHeight/2),
-    new Transform().translate(tileWidth/2,tileHeight/2).rotate(270).translate(-tileWidth/2,-tileHeight/2),
-  ].map((transform, tdx) => {
+  const transforms = WallpaperGroups.getIn(['p3', 'transforms'])(props);
+
+  const tile = transforms.map((transform, tdx) => {
     return canvas.get('lines').map((points, idx) => {
       return <Shape
         key={idx}
@@ -51,7 +50,7 @@ function Canvas (props) {
     });
   });
 
-  const columnCount = Math.ceil(width/tileWidth) + 1;
+  const columnCount = Math.ceil(width/tileWidth) + 2;
   const rowCount = Math.ceil(height/tileHeight);
 
   return (
@@ -68,10 +67,11 @@ function Canvas (props) {
         width={width}
         height={height}
       >
+        <Group>
         {Immutable.Range(0,columnCount*rowCount).map((num) => {
           const col = num % columnCount;
           const row = Math.floor(num / columnCount);
-          const xOffset = (row % 2) * tileWidth / 2;
+          const xOffset = tileWidth + (row % 2) * tileWidth / 2;
 
           return (
             <Group x={col*tileWidth - xOffset} y={row*tileHeight}>
@@ -79,6 +79,7 @@ function Canvas (props) {
             </Group>
           );
         })}
+        </Group>
       </Surface>
     </div>
   );
