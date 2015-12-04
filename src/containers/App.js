@@ -1,16 +1,13 @@
 import React, { Component } from 'react';
 import CanvasApp from './CanvasApp';
 import { createStore, applyMiddleware, combineReducers, compose } from 'redux';
-import { devTools, persistState } from 'redux-devtools';
-import { DevTools, DebugPanel, LogMonitor } from 'redux-devtools/lib/react';
 import thunk from 'redux-thunk';
 import { Provider } from 'react-redux';
 import * as reducers from '../reducers';
 
 const finalCreateStore = compose(
   applyMiddleware(thunk),
-  devTools(),
-  persistState(window.location.href.match(/[?&]debug_session=([^&]+)\b/))
+  window.devToolsExtension ? window.devToolsExtension() : f => f,
 )(createStore);
 
 const reducer = combineReducers(reducers);
@@ -29,11 +26,6 @@ export default class App extends Component {
         <Provider store={store}>
           <CanvasApp />
         </Provider>
-        <DebugPanel top right bottom>
-          <DevTools store={store}
-                    monitor={LogMonitor}
-                    visibleOnLoad={false} />
-        </DebugPanel>
       </div>
     );
   }

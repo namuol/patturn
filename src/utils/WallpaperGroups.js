@@ -2,15 +2,19 @@ import Immutable from 'immutable';
 import { Transform } from 'react-art';
 
 export default Immutable.fromJS({
+  none: {
+    transforms: function none () {
+      return [
+        new Transform(),
+      ];
+    },
+  },
   p2: {
     transforms: function p2Transforms ({tileWidth, tileHeight}) {
       return [
         new Transform(),
         new Transform().translate(tileWidth/2,tileHeight/2).rotate(180).translate(-tileWidth/2,-tileHeight/2),
       ];
-    },
-    tilePosition: function p2TilePosition (num) {
-
     },
   },
 

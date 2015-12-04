@@ -22,6 +22,21 @@ const seamstressConfig = {
   },
 };
 
+class Path extends Component {
+  render () {
+    return <Shape
+      stroke={'#000'}
+      strokeWidth={2.5}
+      transform={this.props.transform}
+      d={'M' + this.props.points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
+    />;  
+  }
+
+  shouldComponentUpdate ({last}) {
+    return !!last;
+  }
+}
+
 function Canvas (props) {
   const {
     startDrawingLine,
@@ -30,7 +45,6 @@ function Canvas (props) {
 
     tileWidth,
     tileHeight,
-
     width,
     height,
     computedStyles,
@@ -39,19 +53,18 @@ function Canvas (props) {
   const transforms = WallpaperGroups.getIn(['p3', 'transforms'])(props);
 
   const tile = transforms.map((transform, tdx) => {
-    return canvas.get('lines').map((points, idx) => {
+    return canvas.get('paths').map((points, idx) => {
       return <Shape
-        key={idx}
         stroke={'#000'}
-        strokeWidth={2}
+        strokeWidth={2.5}
         transform={transform}
         d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
-      />;
+      />; 
     });
   });
 
-  const columnCount = Math.ceil(width/tileWidth) + 2;
-  const rowCount = Math.ceil(height/tileHeight);
+  const columnCount = Math.ceil(width / tileWidth)*3;
+  const rowCount = Math.ceil(height / tileHeight)*3;
 
   return (
     <div
@@ -59,7 +72,7 @@ function Canvas (props) {
         const { top, left, width, height } = e.target.getBoundingClientRect();
         const x = e.clientX - left;
         const y = e.clientY - top;
-        startDrawingLine(x, y);
+        startDrawingLine({x,y, tileWidth,tileHeight});
       }}
       {...computedStyles.root}
     >
@@ -68,13 +81,19 @@ function Canvas (props) {
         height={height}
       >
         <Group>
-        {Immutable.Range(0,columnCount*rowCount).map((num) => {
+        {Immutable.Range(0,(rowCount + 2)*(columnCount + 2)).map((num) => {
           const col = num % columnCount;
           const row = Math.floor(num / columnCount);
-          const xOffset = tileWidth + (row % 2) * tileWidth / 2;
+          const xOffset = tileWidth/2 - (row % 2) * tileWidth / 2;
+          // const xOffset = 0;
 
           return (
-            <Group x={col*tileWidth - xOffset} y={row*tileHeight}>
+            <Group x={col*tileWidth - (columnCount/3)*tileWidth - xOffset} y={row*tileHeight - (rowCount/3)*tileHeight - tileHeight}>
+              {/*<Shape
+                transform={new Transform().translate(tileWidth/2-3,tileHeight/2-3)}
+                d={'M0,0, 6,0, 6,6, 0,6Z'}
+                fill={'#f00'}
+              />/**/}
               {tile}
             </Group>
           );

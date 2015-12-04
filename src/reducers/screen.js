@@ -14,6 +14,7 @@ export default function screen (state=defaultState, action) {
   
   switch (action.type) {
   case RESIZE_SCREEN:
+    return state.set('width', width).set('height', height);
   default:
     return state;
   }

@@ -4,23 +4,28 @@ import {
   STOP_DRAWING_LINE,
 } from '../constants/ActionTypes';
 
-export function startDrawingLine (x,y) {
+import mod from '../utils/mod';
+
+export function startDrawingLine ({x,y,tileWidth,tileHeight}) {
   return {
     type: START_DRAWING_LINE,
-    x,y
+    x,y,
+    tileWidth,tileHeight,
   };
 }
 
-export function drawTo (x,y) {
+export function drawTo ({x,y,tileWidth,tileHeight}) {
   return {
     type: DRAW_LINE,
-    x,y
+    x,y,
+    tileWidth,tileHeight,
   };
 }
 
-export function stopDrawingLine (x,y) {
+export function stopDrawingLine ({x,y, tileWidth,tileHeight}) {
   return {
     type: STOP_DRAWING_LINE,
-    x,y
+    x,y,
+    tileWidth,tileHeight,
   };
 }

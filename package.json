@@ -20,13 +20,14 @@
     "react-transform-catch-errors": "^1.0.0",
     "react-transform-hmr": "^1.0.0",
     "redbox-react": "^1.0.1",
-    "redux-devtools": "^2.1.5",
     "rimraf": "^2.4.3",
+    "tape": "^4.2.2",
     "webpack": "^1.9.6",
     "webpack-dev-middleware": "^1.2.0",
     "webpack-hot-middleware": "^2.0.0"
   },
   "dependencies": {
+    "deep-equal": "^1.0.1",
     "fbjs": "^0.2.1",
     "immutable": "^3.7.5",
     "react": "^0.14.2",
