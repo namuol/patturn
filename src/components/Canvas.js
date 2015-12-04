@@ -5,7 +5,17 @@ import Seamstress from 'react-seamstress';
 
 import WallpaperGroups from '../utils/WallpaperGroups';
 
-import { Group, Shape, Surface, Transform } from 'react-art';
+import {
+  Geometry,
+  Vector3,
+  LineBasicMaterial,
+} from 'three';
+
+import {
+  OrthographicCamera,
+  Scene,
+  Line,
+} from 'react-three';
 
 const seamstressConfig = {
   styles: {
@@ -22,21 +32,6 @@ const seamstressConfig = {
   },
 };
 
-class Path extends Component {
-  render () {
-    return <Shape
-      stroke={'#000'}
-      strokeWidth={2.5}
-      transform={this.props.transform}
-      d={'M' + this.props.points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
-    />;  
-  }
-
-  shouldComponentUpdate ({last}) {
-    return !!last;
-  }
-}
-
 function Canvas (props) {
   const {
     startDrawingLine,
@@ -51,14 +46,21 @@ function Canvas (props) {
   } = props;
 
   const transforms = WallpaperGroups.getIn(['p3', 'transforms'])(props);
+  const material = new LineBasicMaterial({
+    color: 0x000000,
+    linewidth: 3,
+    opacity: 1,
+    linecap: 'round',
+  });
 
   const tile = transforms.map((transform, tdx) => {
     return canvas.get('paths').map((points, idx) => {
-      return <Shape
-        stroke={'#000'}
-        strokeWidth={2.5}
-        transform={transform}
-        d={'M' + points.map(p => `${p.get('x')},${p.get('y')}`).join(',')}
+      const geometry = new Geometry();
+      const vecs = points.toJS().map(p => new Vector3(p.x, p.y, 0));
+      geometry.vertices.push(...vecs);
+      return <Line
+        geometry={geometry}
+        material={material}
       />; 
     });
   });
@@ -76,12 +78,23 @@ function Canvas (props) {
       }}
       {...computedStyles.root}
     >
-      <Surface
+      <Scene
         width={width}
         height={height}
+        camera="maincamera"
+        background={0xffffff}
       >
-        <Group>
-        {Immutable.Range(0,(rowCount + 2)*(columnCount + 2)).map((num) => {
+        <OrthographicCamera
+          name="maincamera"
+          left={0}
+          right={width}
+          top={0}
+          bottom={height}
+          near={-100}
+          far={100}
+        />
+        {tile}
+        {/*Immutable.Range(0,(rowCount + 2)*(columnCount + 2)).map((num) => {
           const col = num % columnCount;
           const row = Math.floor(num / columnCount);
           const xOffset = tileWidth/2 - (row % 2) * tileWidth / 2;
@@ -89,17 +102,11 @@ function Canvas (props) {
 
           return (
             <Group x={col*tileWidth - (columnCount/3)*tileWidth - xOffset} y={row*tileHeight - (rowCount/3)*tileHeight - tileHeight}>
-              {/*<Shape
-                transform={new Transform().translate(tileWidth/2-3,tileHeight/2-3)}
-                d={'M0,0, 6,0, 6,6, 0,6Z'}
-                fill={'#f00'}
-              />/**/}
               {tile}
             </Group>
           );
-        })}
-        </Group>
-      </Surface>
+        })*/}
+      </Scene>
     </div>
   );
 }
