@@ -1,31 +1,21 @@
 // @flow
-import React, { Component } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom';
 
-type Point = [number, number];
-
-type Path = Array<Point>;
-
-type TileProps = $Exact<{
-  id: string,
-  pageMouseX: number,
-  pageMouseY: number,
-  paths: Array<Path>,
-  tileHeight: number,
-  tileWidth: number,
-}>;
+import { compose } from 'ramda';
+import withInternalReducer from './withInternalReducer';
 
 const getTileCoordFromPageCoord = (
   {
-    pageMouseX,
-    pageMouseY,
+    x,
+    y,
     tileHeight,
     tileWidth,
   }
 ) => {
   return [
-    pageMouseX - Math.floor(pageMouseX / tileWidth) * tileWidth,
-    pageMouseY - Math.floor(pageMouseY / tileHeight) * tileHeight,
+    x - Math.floor(x / tileWidth) * tileWidth,
+    y - Math.floor(y / tileHeight) * tileHeight,
   ];
 };
 
@@ -33,11 +23,10 @@ const TileableCircle = (
   {
     cx,
     cy,
-    r,
     fill,
-
-    tileWidth,
+    r,
     tileHeight,
+    tileWidth,
   }
 ) => {
   return (
@@ -59,22 +48,46 @@ const TileableCircle = (
   );
 };
 
+type Point = [number, number];
+type Path = Array<Point>;
+type TileProps = {
+  id: string,
+  mousePageX: number,
+  mousePageY: number,
+  mousePressed: boolean,
+  paths: Array<Path>,
+  tileHeight: number,
+  tileWidth: number,
+};
 const Tile = (
   {
     id,
-    pageMouseX,
-    pageMouseY,
+    mousePageX,
+    mousePageY,
+    mousePressed,
     paths,
     tileHeight,
     tileWidth,
   }: TileProps
 ) => {
   const [tileMouseX, tileMouseY] = getTileCoordFromPageCoord({
-    pageMouseX,
-    pageMouseY,
+    x: mousePageX,
+    y: mousePageY,
     tileHeight,
     tileWidth,
   });
+
+  const tilePaths = paths.map(points => {
+    return points.map(([x, y]) => {
+      return getTileCoordFromPageCoord({
+        x,
+        y,
+        tileWidth,
+        tileHeight,
+      });
+    });
+  });
+
   return (
     <pattern
       id={id}
@@ -82,11 +95,18 @@ const Tile = (
       height={tileHeight}
       patternUnits="userSpaceOnUse"
     >
-      {paths.map((points, idx) => {
+      {tilePaths.map((points, idx) => {
+        // return (
+        //   <g>
+        //     {points.map(([x, y]) => {
+        //       return <circle cx={x} cy={y} r={2} fill="black" />;
+        //     })}
+        //   </g>
+        // );
         return (
           <polyline
-            stroke="#ddd"
-            fill="red"
+            stroke="black"
+            fill="transparent"
             key={idx}
             points={points.map(coords => coords.join(',')).join(' ')}
           />
@@ -106,7 +126,7 @@ const Tile = (
         cx={tileMouseX}
         cy={tileMouseY}
         r={4}
-        fill="blue"
+        fill={mousePressed ? 'red' : 'blue'}
         tileWidth={tileWidth}
         tileHeight={tileHeight}
       />
@@ -114,13 +134,24 @@ const Tile = (
   );
 };
 
+type CanvasProps = {
+  mousePageX: number,
+  mousePageY: number,
+  mousePressed: boolean,
+  viewBoxHeight: number,
+  viewBoxWidth: number,
+  paths: Array<Path>,
+};
+
 const Canvas = (
   {
-    viewBoxWidth,
+    mousePageX,
+    mousePageY,
+    mousePressed,
     viewBoxHeight,
-    pageMouseX,
-    pageMouseY,
-  }
+    viewBoxWidth,
+    paths,
+  }: CanvasProps
 ) => {
   return (
     <svg viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
@@ -128,9 +159,11 @@ const Canvas = (
         id="patturnTile"
         tileWidth={100}
         tileHeight={100}
-        pageMouseX={pageMouseX}
-        pageMouseY={pageMouseY}
-        paths={[[[0, 0], [100, 0]], [[0, 0], [0, 100]]]}
+        mousePageX={mousePageX}
+        mousePageY={mousePageY}
+        mousePressed={mousePressed}
+        // prettier-ignore
+        paths={paths}
       />
       <rect
         width={viewBoxWidth}
@@ -141,54 +174,210 @@ const Canvas = (
   );
 };
 
-class App extends Component {
-  state = {
-    viewBoxWidth: 0,
-    viewBoxHeight: 0,
-    pageMouseX: 310,
-    pageMouseY: 0,
-  };
+type State = {
+  mousePageX: number,
+  mousePageY: number,
+  mousePressed: boolean,
+  paths: Array<Path>,
+};
 
-  measureCanvas = element => {
-    const dims = ReactDOM.findDOMNode(element).getBoundingClientRect();
-    const { width, height } = dims;
-    this.setState(() => {
-      return {
-        viewBoxWidth: width,
-        viewBoxHeight: height,
-      };
-    });
-  };
-
-  handleMouseMove = (
-    {
-      pageX,
-      pageY,
+type Action =
+  | {
+      type: 'MOUSE_MOVED',
+      payload: {
+        pageX: number,
+        pageY: number,
+      },
     }
-  ) => {
-    this.setState(state => {
+  | {
+      type: 'MOUSE_PRESSED',
+    }
+  | {
+      type: 'MOUSE_RELEASED',
+    };
+
+const defaultState: State = {
+  mousePageX: 0,
+  mousePageY: 0,
+  mousePressed: false,
+  paths: [],
+};
+
+const getReducer = () =>
+  (state: State = defaultState, action: Action) => {
+    if (action.type === 'MOUSE_MOVED') {
+      const {
+        pageX: mousePageX,
+        pageY: mousePageY,
+      } = action.payload;
+
+      const { paths } = state;
+      let updatedPaths;
+
+      if (state.mousePressed) {
+        updatedPaths = [
+          ...paths.slice(0, paths.length - 1),
+          [...paths[paths.length - 1], [mousePageX, mousePageY]],
+        ];
+      } else {
+        updatedPaths = paths;
+      }
+
       return {
         ...state,
-        pageMouseX: pageX,
-        pageMouseY: pageY,
+        mousePageX,
+        mousePageY,
+        paths: updatedPaths,
       };
-    });
+    }
+
+    if (action.type === 'MOUSE_PRESSED') {
+      return {
+        ...state,
+        mousePressed: true,
+        paths: [...state.paths, []],
+      };
+    }
+
+    if (action.type === 'MOUSE_RELEASED') {
+      const { paths } = state;
+      const lastPath = paths[paths.length - 1];
+      let updatedPaths;
+
+      if (lastPath && lastPath.length === 0) {
+        updatedPaths = paths.slice(0, paths.length - 1);
+      } else {
+        updatedPaths = paths;
+      }
+
+      return {
+        ...state,
+        mousePressed: false,
+        paths: updatedPaths,
+      };
+    }
+
+    return state;
   };
 
-  render() {
-    return (
-      <div
-        onMouseMove={this.handleMouseMove}
-        style={{
-          width: '100%',
-          height: '100%',
-        }}
-        ref={this.measureCanvas}
-      >
-        <Canvas {...this.state} />
-      </div>
-    );
+const mapStateToProps = state => {
+  return { state };
+};
+
+const mapDispatchToProps = dispatch => {
+  return {
+    handleMouseMove: (event: SyntheticMouseEvent) => {
+      const { pageX, pageY } = event;
+      dispatch({
+        type: 'MOUSE_MOVED',
+        payload: {
+          pageX,
+          pageY,
+        },
+      });
+    },
+    handleMouseDown: () => {
+      dispatch({ type: 'MOUSE_PRESSED' });
+    },
+
+    handleMouseUp: () => {
+      dispatch({ type: 'MOUSE_RELEASED' });
+    },
+  };
+};
+
+const withViewBoxDimensions = function<WrappedProps>(
+  WrappedComponent: React.Component<*, WrappedProps, *>
+) {
+  type ProvidedProps = {
+    viewBoxWidth: number,
+    viewBoxHeight: number,
+  };
+
+  class ViewBoxProvider extends React.Component {
+    props: $Diff<WrappedProps, ProvidedProps>;
+
+    state: ProvidedProps = {
+      viewBoxWidth: 0,
+      viewBoxHeight: 0,
+    };
+
+    componentDidMount() {
+      const element = ReactDOM.findDOMNode(this);
+
+      if (!element || typeof element.getBoundingClientRect !== 'function') {
+        return;
+      }
+
+      const { width, height } = element.getBoundingClientRect();
+      this.setState((state: ProvidedProps) => {
+        return {
+          ...state,
+          viewBoxWidth: width,
+          viewBoxHeight: height,
+        };
+      });
+    }
+
+    render() {
+      // $FlowFixMe
+      return <WrappedComponent {...this.props} {...this.state} />;
+    }
   }
-}
+
+  // $FlowFixMe
+  return ViewBoxProvider;
+};
+
+type Props = {
+  handleMouseMove: Function,
+  handleMouseDown: Function,
+  handleMouseUp: Function,
+  state: State,
+  viewBoxWidth: number,
+  viewBoxHeight: number,
+};
+
+const PureApp = (
+  {
+    handleMouseMove,
+    handleMouseDown,
+    handleMouseUp,
+    state: {
+      mousePageX,
+      mousePageY,
+      mousePressed,
+      paths,
+    },
+    viewBoxWidth,
+    viewBoxHeight,
+  }: Props
+) => {
+  return (
+    <div
+      onMouseMove={handleMouseMove}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      style={{
+        height: '100%',
+        width: '100%',
+      }}
+    >
+      <Canvas
+        mousePageX={mousePageX}
+        mousePageY={mousePageY}
+        mousePressed={mousePressed}
+        viewBoxWidth={viewBoxWidth}
+        viewBoxHeight={viewBoxHeight}
+        paths={paths}
+      />
+    </div>
+  );
+};
+
+const App = compose(
+  withInternalReducer(getReducer, mapStateToProps, mapDispatchToProps),
+  withViewBoxDimensions
+)(PureApp);
 
 export default App;
