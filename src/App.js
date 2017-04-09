@@ -5,6 +5,12 @@ import ReactDOM from 'react-dom';
 import { compose } from 'ramda';
 import withInternalReducer from './withInternalReducer';
 
+import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
+
+import type { Path, Point } from './types';
+
+const getCoordShiftAmount = (value, size) => -Math.floor(value / size) * size;
+
 const getTileCoordFromPageCoord = (
   {
     x,
@@ -12,11 +18,34 @@ const getTileCoordFromPageCoord = (
     tileHeight,
     tileWidth,
   }
-) => {
+): Point => {
   return [
-    x - Math.floor(x / tileWidth) * tileWidth,
-    y - Math.floor(y / tileHeight) * tileHeight,
+    x + getCoordShiftAmount(x, tileWidth),
+    y + getCoordShiftAmount(y, tileHeight),
   ];
+};
+
+const addToCoords = ([xDiff, yDiff]) =>
+  ([x, y]) => {
+    return [x + xDiff, y + yDiff];
+  };
+
+const getTileSegmentFromPageSegment = (
+  {
+    points,
+    tileHeight,
+    tileWidth,
+  }: {
+    points: Array<Point>,
+    tileWidth: number,
+    tileHeight: number,
+  }
+): Array<Point> => {
+  const [x, y] = points[0];
+  const xDiff = getCoordShiftAmount(x, tileWidth);
+  const yDiff = getCoordShiftAmount(y, tileHeight);
+
+  return points.map(addToCoords([xDiff, yDiff]));
 };
 
 const TileableCircle = (
@@ -48,8 +77,46 @@ const TileableCircle = (
   );
 };
 
-type Point = [number, number];
-type Path = Array<Point>;
+const getPolylinePointsString = (points: Array<Point>) => {
+  return points.map(coords => coords.slice(0, 2).join(',')).join(' ');
+};
+
+const TilablePolyline = (
+  {
+    points,
+    tileWidth,
+    tileHeight,
+    ...props
+  }: {
+    points: Array<Point>,
+    tileWidth: number,
+    tileHeight: number,
+  }
+) => {
+  return (
+    <g>
+      {[
+        [0, 0],
+        [0, tileHeight],
+        [0, -tileHeight],
+        [tileWidth, 0],
+        [tileWidth, tileWidth],
+        [tileWidth, -tileWidth],
+        [-tileWidth, 0],
+        [-tileWidth, tileWidth],
+        [-tileWidth, -tileWidth],
+      ].map(offset => {
+        return (
+          <polyline
+            {...props}
+            points={getPolylinePointsString(points.map(addToCoords(offset)))}
+          />
+        );
+      })}
+    </g>
+  );
+};
+
 type TileProps = {
   id: string,
   mousePageX: number,
@@ -77,16 +144,40 @@ const Tile = (
     tileWidth,
   });
 
-  const tilePaths = paths.map(points => {
-    return points.map(([x, y]) => {
-      return getTileCoordFromPageCoord({
-        x,
-        y,
-        tileWidth,
-        tileHeight,
-      });
+  const tilePaths = paths
+    .reduce(
+      (allPaths, path) => {
+        return [
+          ...allPaths,
+          ...splitSegmentsAtTileBoundaries({
+            path,
+            tileWidth,
+            tileHeight,
+          }),
+        ];
+      },
+      []
+    )
+    .map(path => {
+      const { points, intersectsGrid } = path;
+      return {
+        ...path,
+        points: intersectsGrid
+          ? getTileSegmentFromPageSegment({
+              points,
+              tileWidth,
+              tileHeight,
+            })
+          : points.map(([x, y]) => {
+              return getTileCoordFromPageCoord({
+                x,
+                y,
+                tileWidth,
+                tileHeight,
+              });
+            }),
+      };
     });
-  });
 
   return (
     <pattern
@@ -95,7 +186,7 @@ const Tile = (
       height={tileHeight}
       patternUnits="userSpaceOnUse"
     >
-      {tilePaths.map((points, idx) => {
+      {tilePaths.map(({ points, intersectsGrid }, idx) => {
         // return (
         //   <g>
         //     {points.map(([x, y]) => {
@@ -103,14 +194,31 @@ const Tile = (
         //     })}
         //   </g>
         // );
-        return (
-          <polyline
-            stroke="black"
-            fill="transparent"
-            key={idx}
-            points={points.map(coords => coords.join(',')).join(' ')}
-          />
-        );
+        if (intersectsGrid) {
+          return (
+            <TilablePolyline
+              strokeWidth={2}
+              stroke="red"
+              key={idx}
+              fill="none"
+              points={points}
+              tileWidth={tileWidth}
+              tileHeight={tileHeight}
+            />
+          );
+        } else {
+          return (
+            <polyline
+              strokeWidth={2}
+              stroke="black"
+              fill="none"
+              key={idx}
+              points={points
+                .map(coords => coords.slice(0, 2).join(','))
+                .join(' ')}
+            />
+          );
+        }
       })}
 
       <TileableCircle
@@ -125,8 +233,8 @@ const Tile = (
       <TileableCircle
         cx={tileMouseX}
         cy={tileMouseY}
-        r={4}
-        fill={mousePressed ? 'red' : 'blue'}
+        r={2}
+        fill={mousePressed ? 'red' : 'rgba(0,0,0,0.2)'}
         tileWidth={tileWidth}
         tileHeight={tileHeight}
       />
@@ -157,8 +265,8 @@ const Canvas = (
     <svg viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
       <Tile
         id="patturnTile"
-        tileWidth={100}
-        tileHeight={100}
+        tileWidth={200}
+        tileHeight={200}
         mousePageX={mousePageX}
         mousePageY={mousePageY}
         mousePressed={mousePressed}
@@ -217,7 +325,12 @@ const getReducer = () =>
       if (state.mousePressed) {
         updatedPaths = [
           ...paths.slice(0, paths.length - 1),
-          [...paths[paths.length - 1], [mousePageX, mousePageY]],
+          {
+            points: [
+              ...paths[paths.length - 1].points,
+              [mousePageX, mousePageY],
+            ],
+          },
         ];
       } else {
         updatedPaths = paths;
@@ -235,25 +348,17 @@ const getReducer = () =>
       return {
         ...state,
         mousePressed: true,
-        paths: [...state.paths, []],
+        paths: [
+          ...state.paths,
+          { points: [[state.mousePageX, state.mousePageY]] },
+        ],
       };
     }
 
     if (action.type === 'MOUSE_RELEASED') {
-      const { paths } = state;
-      const lastPath = paths[paths.length - 1];
-      let updatedPaths;
-
-      if (lastPath && lastPath.length === 0) {
-        updatedPaths = paths.slice(0, paths.length - 1);
-      } else {
-        updatedPaths = paths;
-      }
-
       return {
         ...state,
         mousePressed: false,
-        paths: updatedPaths,
       };
     }
 
@@ -369,6 +474,15 @@ const PureApp = (
         mousePressed={mousePressed}
         viewBoxWidth={viewBoxWidth}
         viewBoxHeight={viewBoxHeight}
+        // paths={[
+        //   //prettier-ignore
+        //   {points: [
+        //     [200 + 30, 10],
+        //     [200 + 10, 10],
+        //     [200 + -10, 10],
+        //     [200 + -30, 10],
+        //   ]},
+        // ]}
         paths={paths}
       />
     </div>

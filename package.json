@@ -32,5 +32,10 @@
       "prettier --single-quote --trailing-comma --write --parser=flow",
       "git add"
     ]
+  },
+  "jest": {
+    "testMatch": [
+      "src/**/*.js"
+    ]
   }
 }
