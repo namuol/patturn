@@ -29,7 +29,7 @@
   },
   "lint-staged": {
     "*.js": [
-      "prettier --single-quote --trailing-comma --write --parser=flow",
+      "prettier --bracket-spacing=false --single-quote --trailing-comma=all --parser=flow --all",
       "git add"
     ]
   },

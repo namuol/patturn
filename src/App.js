@@ -2,12 +2,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { compose } from 'ramda';
+import {compose} from 'ramda';
 import withInternalReducer from './withInternalReducer';
 
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
 
-import type { Path, Point } from './types';
+import type {Path, Point} from './types';
 
 const getCoordShiftAmount = (value, size) => -Math.floor(value / size) * size;
 
@@ -159,7 +159,7 @@ const Tile = (
       []
     )
     .map(path => {
-      const { points, intersectsGrid } = path;
+      const {points, intersectsGrid} = path;
       return {
         ...path,
         points: intersectsGrid
@@ -186,7 +186,7 @@ const Tile = (
       height={tileHeight}
       patternUnits="userSpaceOnUse"
     >
-      {tilePaths.map(({ points, intersectsGrid }, idx) => {
+      {tilePaths.map(({points, intersectsGrid}, idx) => {
         // return (
         //   <g>
         //     {points.map(([x, y]) => {
@@ -319,7 +319,7 @@ const getReducer = () =>
         pageY: mousePageY,
       } = action.payload;
 
-      const { paths } = state;
+      const {paths} = state;
       let updatedPaths;
 
       if (state.mousePressed) {
@@ -350,7 +350,7 @@ const getReducer = () =>
         mousePressed: true,
         paths: [
           ...state.paths,
-          { points: [[state.mousePageX, state.mousePageY]] },
+          {points: [[state.mousePageX, state.mousePageY]]},
         ],
       };
     }
@@ -366,13 +366,13 @@ const getReducer = () =>
   };
 
 const mapStateToProps = state => {
-  return { state };
+  return {state};
 };
 
 const mapDispatchToProps = dispatch => {
   return {
     handleMouseMove: (event: SyntheticMouseEvent) => {
-      const { pageX, pageY } = event;
+      const {pageX, pageY} = event;
       dispatch({
         type: 'MOUSE_MOVED',
         payload: {
@@ -382,11 +382,11 @@ const mapDispatchToProps = dispatch => {
       });
     },
     handleMouseDown: () => {
-      dispatch({ type: 'MOUSE_PRESSED' });
+      dispatch({type: 'MOUSE_PRESSED'});
     },
 
     handleMouseUp: () => {
-      dispatch({ type: 'MOUSE_RELEASED' });
+      dispatch({type: 'MOUSE_RELEASED'});
     },
   };
 };
@@ -414,7 +414,7 @@ const withViewBoxDimensions = function<WrappedProps>(
         return;
       }
 
-      const { width, height } = element.getBoundingClientRect();
+      const {width, height} = element.getBoundingClientRect();
       this.setState((state: ProvidedProps) => {
         return {
           ...state,
