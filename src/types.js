@@ -1,5 +1,8 @@
 // @flow
-export type Point = [number, number];
+export type Point = {
+  x: number,
+  y: number,
+};
 export type Path = {
   points: Array<Point>,
   intersectsGrid?: boolean,

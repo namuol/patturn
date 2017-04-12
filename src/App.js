@@ -6,6 +6,7 @@ import {compose} from 'ramda';
 import withInternalReducer from './withInternalReducer';
 
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
+import simplify from 'simplify-js';
 
 import type {Path, Point} from './types';
 
@@ -17,17 +18,17 @@ const getTileCoordFromPageCoord = (
     y,
     tileHeight,
     tileWidth,
-  }
+  },
 ): Point => {
-  return [
-    x + getCoordShiftAmount(x, tileWidth),
-    y + getCoordShiftAmount(y, tileHeight),
-  ];
+  return {
+    x: x + getCoordShiftAmount(x, tileWidth),
+    y: y + getCoordShiftAmount(y, tileHeight),
+  };
 };
 
-const addToCoords = ([xDiff, yDiff]) =>
-  ([x, y]) => {
-    return [x + xDiff, y + yDiff];
+const addToCoords = ({x: xDiff, y: yDiff}) =>
+  ({x, y}) => {
+    return {x: x + xDiff, y: y + yDiff};
   };
 
 const getTileSegmentFromPageSegment = (
@@ -39,13 +40,13 @@ const getTileSegmentFromPageSegment = (
     points: Array<Point>,
     tileWidth: number,
     tileHeight: number,
-  }
+  },
 ): Array<Point> => {
-  const [x, y] = points[0];
+  const {x, y} = points[0];
   const xDiff = getCoordShiftAmount(x, tileWidth);
   const yDiff = getCoordShiftAmount(y, tileHeight);
 
-  return points.map(addToCoords([xDiff, yDiff]));
+  return points.map(addToCoords({x: xDiff, y: yDiff}));
 };
 
 const TileableCircle = (
@@ -56,7 +57,7 @@ const TileableCircle = (
     r,
     tileHeight,
     tileWidth,
-  }
+  },
 ) => {
   return (
     <g>
@@ -78,7 +79,7 @@ const TileableCircle = (
 };
 
 const getPolylinePointsString = (points: Array<Point>) => {
-  return points.map(coords => coords.slice(0, 2).join(',')).join(' ');
+  return points.map(({x, y}) => [x, y].join(',')).join(' ');
 };
 
 const TilablePolyline = (
@@ -91,7 +92,7 @@ const TilablePolyline = (
     points: Array<Point>,
     tileWidth: number,
     tileHeight: number,
-  }
+  },
 ) => {
   return (
     <g>
@@ -105,11 +106,14 @@ const TilablePolyline = (
         [-tileWidth, 0],
         [-tileWidth, tileWidth],
         [-tileWidth, -tileWidth],
-      ].map(offset => {
+      ].map(([xDiff, yDiff], idx) => {
         return (
           <polyline
+            key={idx}
             {...props}
-            points={getPolylinePointsString(points.map(addToCoords(offset)))}
+            points={getPolylinePointsString(
+              points.map(addToCoords({x: xDiff, y: yDiff})),
+            )}
           />
         );
       })}
@@ -135,9 +139,9 @@ const Tile = (
     paths,
     tileHeight,
     tileWidth,
-  }: TileProps
+  }: TileProps,
 ) => {
-  const [tileMouseX, tileMouseY] = getTileCoordFromPageCoord({
+  const {x: tileMouseX, y: tileMouseY} = getTileCoordFromPageCoord({
     x: mousePageX,
     y: mousePageY,
     tileHeight,
@@ -156,7 +160,7 @@ const Tile = (
           }),
         ];
       },
-      []
+      [],
     )
     .map(path => {
       const {points, intersectsGrid} = path;
@@ -168,7 +172,7 @@ const Tile = (
               tileWidth,
               tileHeight,
             })
-          : points.map(([x, y]) => {
+          : points.map(({x, y}) => {
               return getTileCoordFromPageCoord({
                 x,
                 y,
@@ -187,18 +191,13 @@ const Tile = (
       patternUnits="userSpaceOnUse"
     >
       {tilePaths.map(({points, intersectsGrid}, idx) => {
-        // return (
-        //   <g>
-        //     {points.map(([x, y]) => {
-        //       return <circle cx={x} cy={y} r={2} fill="black" />;
-        //     })}
-        //   </g>
-        // );
         if (intersectsGrid) {
           return (
             <TilablePolyline
               strokeWidth={2}
-              stroke="red"
+              stroke="black"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               key={idx}
               fill="none"
               points={points}
@@ -211,11 +210,11 @@ const Tile = (
             <polyline
               strokeWidth={2}
               stroke="black"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               fill="none"
               key={idx}
-              points={points
-                .map(coords => coords.slice(0, 2).join(','))
-                .join(' ')}
+              points={points.map(({x, y}) => [x, y].join(',')).join(' ')}
             />
           );
         }
@@ -243,12 +242,15 @@ const Tile = (
 };
 
 type CanvasProps = {
+  tileWidth: number,
+  tileHeight: number,
+  viewBoxHeight: number,
+  viewBoxWidth: number,
+  zoom: number,
+  paths: Array<Path>,
   mousePageX: number,
   mousePageY: number,
   mousePressed: boolean,
-  viewBoxHeight: number,
-  viewBoxWidth: number,
-  paths: Array<Path>,
 };
 
 const Canvas = (
@@ -259,23 +261,38 @@ const Canvas = (
     viewBoxHeight,
     viewBoxWidth,
     paths,
-  }: CanvasProps
+    zoom,
+  }: CanvasProps,
 ) => {
+  let simplifiedPaths = paths;
+  // const simplifyPath = ({points, ...rest}) => ({
+  //   ...rest,
+  //   points: simplify(points, 0.5 / zoom, true),
+  // });
+  //
+  // if (mousePressed) {
+  //   simplifiedPaths = paths
+  //     .slice(0, -1)
+  //     .map(simplifyPath)
+  //     .concat(paths.slice(-1));
+  // } else {
+  //   simplifiedPaths = paths.map(simplifyPath);
+  // }
+
   return (
-    <svg viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
+    <svg viewBox={`0 0 ${viewBoxWidth / zoom} ${viewBoxHeight / zoom}`}>
       <Tile
         id="patturnTile"
-        tileWidth={200}
-        tileHeight={200}
+        tileWidth={100}
+        tileHeight={100}
         mousePageX={mousePageX}
         mousePageY={mousePageY}
         mousePressed={mousePressed}
-        // prettier-ignore
-        paths={paths}
+        paths={simplifiedPaths}
       />
       <rect
-        width={viewBoxWidth}
-        height={viewBoxHeight}
+        width={viewBoxWidth / zoom}
+        height={viewBoxHeight / zoom}
         fill="url(#patturnTile)"
       />
     </svg>
@@ -287,6 +304,7 @@ type State = {
   mousePageY: number,
   mousePressed: boolean,
   paths: Array<Path>,
+  zoom: number,
 };
 
 type Action =
@@ -302,24 +320,30 @@ type Action =
     }
   | {
       type: 'MOUSE_RELEASED',
-    };
+    }
+  | {type: 'ZOOMED', payload: {amount: number}};
 
 const defaultState: State = {
   mousePageX: 0,
   mousePageY: 0,
+  zoom: 2.25,
   mousePressed: false,
   paths: [],
 };
 
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
 const getReducer = () =>
   (state: State = defaultState, action: Action) => {
     if (action.type === 'MOUSE_MOVED') {
+      const {paths, zoom} = state;
       const {
-        pageX: mousePageX,
-        pageY: mousePageY,
+        pageX,
+        pageY,
       } = action.payload;
+      const mousePageX = pageX / zoom;
+      const mousePageY = pageY / zoom;
 
-      const {paths} = state;
       let updatedPaths;
 
       if (state.mousePressed) {
@@ -328,7 +352,7 @@ const getReducer = () =>
           {
             points: [
               ...paths[paths.length - 1].points,
-              [mousePageX, mousePageY],
+              {x: mousePageX, y: mousePageY},
             ],
           },
         ];
@@ -345,13 +369,11 @@ const getReducer = () =>
     }
 
     if (action.type === 'MOUSE_PRESSED') {
+      const {mousePageX, mousePageY} = state;
       return {
         ...state,
         mousePressed: true,
-        paths: [
-          ...state.paths,
-          {points: [[state.mousePageX, state.mousePageY]]},
-        ],
+        paths: [...state.paths, {points: [{x: mousePageX, y: mousePageY}]}],
       };
     }
 
@@ -359,6 +381,15 @@ const getReducer = () =>
       return {
         ...state,
         mousePressed: false,
+      };
+    }
+
+    if (action.type === 'ZOOMED') {
+      const {zoom} = state;
+      const {payload: {amount}} = action;
+      return {
+        ...state,
+        zoom: clamp(zoom - amount * (zoom * 0.002), 0.5, 10),
       };
     }
 
@@ -388,11 +419,22 @@ const mapDispatchToProps = dispatch => {
     handleMouseUp: () => {
       dispatch({type: 'MOUSE_RELEASED'});
     },
+
+    handleWheel: (event: SyntheticWheelEvent) => {
+      event.preventDefault();
+      const {deltaY} = event;
+      dispatch({
+        type: 'ZOOMED',
+        payload: {
+          amount: deltaY,
+        },
+      });
+    },
   };
 };
 
 const withViewBoxDimensions = function<WrappedProps>(
-  WrappedComponent: React.Component<*, WrappedProps, *>
+  WrappedComponent: React.Component<*, WrappedProps, *>,
 ) {
   type ProvidedProps = {
     viewBoxWidth: number,
@@ -438,6 +480,7 @@ type Props = {
   handleMouseMove: Function,
   handleMouseDown: Function,
   handleMouseUp: Function,
+  handleWheel: Function,
   state: State,
   viewBoxWidth: number,
   viewBoxHeight: number,
@@ -448,41 +491,39 @@ const PureApp = (
     handleMouseMove,
     handleMouseDown,
     handleMouseUp,
+    handleWheel,
     state: {
       mousePageX,
       mousePageY,
       mousePressed,
       paths,
+      zoom,
     },
     viewBoxWidth,
     viewBoxHeight,
-  }: Props
+  }: Props,
 ) => {
   return (
     <div
       onMouseMove={handleMouseMove}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
+      onWheel={handleWheel}
       style={{
         height: '100%',
         width: '100%',
+        overflow: 'hidden',
       }}
     >
       <Canvas
         mousePageX={mousePageX}
         mousePageY={mousePageY}
         mousePressed={mousePressed}
+        zoom={zoom}
         viewBoxWidth={viewBoxWidth}
         viewBoxHeight={viewBoxHeight}
-        // paths={[
-        //   //prettier-ignore
-        //   {points: [
-        //     [200 + 30, 10],
-        //     [200 + 10, 10],
-        //     [200 + -10, 10],
-        //     [200 + -30, 10],
-        //   ]},
-        // ]}
+        tileHeight={100}
+        tileWidth={100}
         paths={paths}
       />
     </div>
@@ -491,7 +532,7 @@ const PureApp = (
 
 const App = compose(
   withInternalReducer(getReducer, mapStateToProps, mapDispatchToProps),
-  withViewBoxDimensions
+  withViewBoxDimensions,
 )(PureApp);
 
 export default App;
