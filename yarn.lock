@@ -5882,6 +5882,18 @@ tr46@~0.0.3:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/tr46/-/tr46-0.0.3.tgz#8184fd347dac9cdc185992f3a6622e14b9d9ab6a"
 
+transform-to-matrix@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/transform-to-matrix/-/transform-to-matrix-0.1.1.tgz#d7e630f3a06cdd946de0be50af9f9418b0315c89"
+
+transformation-matrix-js@^2.7.1:
+  version "2.7.1"
+  resolved "https://registry.yarnpkg.com/transformation-matrix-js/-/transformation-matrix-js-2.7.1.tgz#0b62e88b655e843e8e5972a668159554ffdcc910"
+
+transformatrix@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/transformatrix/-/transformatrix-1.1.1.tgz#b462cd59e187fa3d956d5931b4a9e6179b0fde8a"
+
 trim-right@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/trim-right/-/trim-right-1.0.1.tgz#cb2e1203067e0c8de1f614094b9fe45704ea6003"

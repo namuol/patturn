@@ -6,7 +6,7 @@ import {compose} from 'ramda';
 import withInternalReducer from './withInternalReducer';
 
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
-import simplify from 'simplify-js';
+import * as transforms from './wallpaperGroupTransforms';
 
 import type {Path, Point} from './types';
 
@@ -129,6 +129,7 @@ type TileProps = {
   paths: Array<Path>,
   tileHeight: number,
   tileWidth: number,
+  zoom: number,
 };
 const Tile = (
   {
@@ -139,6 +140,7 @@ const Tile = (
     paths,
     tileHeight,
     tileWidth,
+    zoom,
   }: TileProps,
 ) => {
   const {x: tileMouseX, y: tileMouseY} = getTileCoordFromPageCoord({
@@ -220,14 +222,14 @@ const Tile = (
         }
       })}
 
-      <TileableCircle
+      {/* <TileableCircle
         cx={0}
         cy={0}
-        r={3}
+        r={3 / zoom}
         fill="#faa"
         tileWidth={tileWidth}
         tileHeight={tileHeight}
-      />
+      /> */}
 
       <TileableCircle
         cx={tileMouseX}
@@ -260,6 +262,8 @@ const Canvas = (
     mousePressed,
     viewBoxHeight,
     viewBoxWidth,
+    tileWidth,
+    tileHeight,
     paths,
     zoom,
   }: CanvasProps,
@@ -283,12 +287,13 @@ const Canvas = (
     <svg viewBox={`0 0 ${viewBoxWidth / zoom} ${viewBoxHeight / zoom}`}>
       <Tile
         id="patturnTile"
-        tileWidth={100}
-        tileHeight={100}
+        tileWidth={tileWidth}
+        tileHeight={tileHeight}
         mousePageX={mousePageX}
         mousePageY={mousePageY}
         mousePressed={mousePressed}
         paths={simplifiedPaths}
+        zoom={zoom}
       />
       <rect
         width={viewBoxWidth / zoom}
@@ -305,6 +310,7 @@ type State = {
   mousePressed: boolean,
   paths: Array<Path>,
   zoom: number,
+  transformType: $Keys<typeof transforms>,
 };
 
 type Action =
@@ -326,9 +332,10 @@ type Action =
 const defaultState: State = {
   mousePageX: 0,
   mousePageY: 0,
-  zoom: 2.25,
+  zoom: 1,
   mousePressed: false,
   paths: [],
+  transformType: 'p3',
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -484,6 +491,8 @@ type Props = {
   state: State,
   viewBoxWidth: number,
   viewBoxHeight: number,
+  tileWidth: number,
+  tileHeight: number,
 };
 
 const PureApp = (
@@ -492,17 +501,22 @@ const PureApp = (
     handleMouseDown,
     handleMouseUp,
     handleWheel,
+    tileWidth = 100 * Math.sqrt(3),
+    tileHeight = 100 * 3,
     state: {
       mousePageX,
       mousePageY,
       mousePressed,
       paths,
       zoom,
+      transformType,
     },
     viewBoxWidth,
     viewBoxHeight,
   }: Props,
 ) => {
+  const transform = transforms[transformType](tileWidth, tileHeight);
+
   return (
     <div
       onMouseMove={handleMouseMove}
@@ -522,9 +536,9 @@ const PureApp = (
         zoom={zoom}
         viewBoxWidth={viewBoxWidth}
         viewBoxHeight={viewBoxHeight}
-        tileHeight={100}
-        tileWidth={100}
-        paths={paths}
+        tileWidth={tileWidth}
+        tileHeight={tileHeight}
+        paths={transform(paths)}
       />
     </div>
   );
