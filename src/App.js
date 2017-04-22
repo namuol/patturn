@@ -8,7 +8,7 @@ import withInternalReducer from './withInternalReducer';
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
 import * as transforms from './wallpaperGroupTransforms';
 
-import type {Path, Point} from './types';
+import type {Path, Point, Provider, Component} from './types';
 
 const getCoordShiftAmount = (value, size) => -Math.floor(value / size) * size;
 
@@ -101,11 +101,11 @@ const TilablePolyline = (
         [0, tileHeight],
         [0, -tileHeight],
         [tileWidth, 0],
-        [tileWidth, tileWidth],
-        [tileWidth, -tileWidth],
+        [tileWidth, tileHeight],
+        [tileWidth, -tileHeight],
         [-tileWidth, 0],
-        [-tileWidth, tileWidth],
-        [-tileWidth, -tileWidth],
+        [-tileWidth, tileHeight],
+        [-tileWidth, -tileHeight],
       ].map(([xDiff, yDiff], idx) => {
         return (
           <polyline
@@ -222,14 +222,14 @@ const Tile = (
         }
       })}
 
-      {/* <TileableCircle
+      <TileableCircle
         cx={0}
         cy={0}
         r={3 / zoom}
         fill="#faa"
         tileWidth={tileWidth}
         tileHeight={tileHeight}
-      /> */}
+      />
 
       <TileableCircle
         cx={tileMouseX}
@@ -403,11 +403,18 @@ const getReducer = () =>
     return state;
   };
 
-const mapStateToProps = state => {
+const mapStateToProps = (state: State): {state: State} => {
   return {state};
 };
 
-const mapDispatchToProps = dispatch => {
+type AppHandlers = {
+  handleMouseMove: (e: SyntheticMouseEvent) => void,
+  handleMouseDown: (e: SyntheticMouseEvent) => void,
+  handleMouseUp: (e: SyntheticMouseEvent) => void,
+  handleWheel: (e: SyntheticWheelEvent) => void,
+};
+
+const mapDispatchToProps = (dispatch): AppHandlers => {
   return {
     handleMouseMove: (event: SyntheticMouseEvent) => {
       const {pageX, pageY} = event;
@@ -440,18 +447,17 @@ const mapDispatchToProps = dispatch => {
   };
 };
 
-const withViewBoxDimensions = function<WrappedProps>(
-  WrappedComponent: React.Component<*, WrappedProps, *>,
-) {
-  type ProvidedProps = {
-    viewBoxWidth: number,
-    viewBoxHeight: number,
-  };
+type ViewBoxProps = {
+  viewBoxWidth: number,
+  viewBoxHeight: number,
+};
 
+const withViewBoxDimensions: Provider<ViewBoxProps> = <VBRP: Object>(
+  WrappedComponent: Component<VBRP & ViewBoxProps>,
+): Component<VBRP> => {
   class ViewBoxProvider extends React.Component {
-    props: $Diff<WrappedProps, ProvidedProps>;
-
-    state: ProvidedProps = {
+    props: VBRP;
+    state: ViewBoxProps = {
       viewBoxWidth: 0,
       viewBoxHeight: 0,
     };
@@ -463,8 +469,11 @@ const withViewBoxDimensions = function<WrappedProps>(
         return;
       }
 
-      const {width, height} = element.getBoundingClientRect();
-      this.setState((state: ProvidedProps) => {
+      const {
+        width,
+        height,
+      }: {width: number, height: number} = element.getBoundingClientRect();
+      this.setState((state: ViewBoxProps) => {
         return {
           ...state,
           viewBoxWidth: width,
@@ -474,77 +483,76 @@ const withViewBoxDimensions = function<WrappedProps>(
     }
 
     render() {
-      // $FlowFixMe
-      return <WrappedComponent {...this.props} {...this.state} />;
+      const props = {...this.props, ...this.state};
+      return <WrappedComponent {...props} />;
     }
   }
 
-  // $FlowFixMe
   return ViewBoxProvider;
 };
 
-type Props = {
-  handleMouseMove: Function,
-  handleMouseDown: Function,
-  handleMouseUp: Function,
-  handleWheel: Function,
+type AppRequiredProps = {
+  tileSize: number,
+};
+
+type Props = AppRequiredProps & AppHandlers & ViewBoxProps & {
   state: State,
-  viewBoxWidth: number,
-  viewBoxHeight: number,
-  tileWidth: number,
-  tileHeight: number,
 };
 
-const PureApp = (
-  {
-    handleMouseMove,
-    handleMouseDown,
-    handleMouseUp,
-    handleWheel,
-    tileWidth = 100 * Math.sqrt(3),
-    tileHeight = 100 * 3,
-    state: {
-      mousePageX,
-      mousePageY,
-      mousePressed,
-      paths,
-      zoom,
-      transformType,
-    },
-    viewBoxWidth,
-    viewBoxHeight,
-  }: Props,
-) => {
-  const transform = transforms[transformType](tileWidth, tileHeight);
+class PureApp extends React.Component {
+  props: Props;
+  render() {
+    const {
+      handleMouseMove,
+      handleMouseDown,
+      handleMouseUp,
+      handleWheel,
+      tileSize,
+      state: {
+        mousePageX,
+        mousePageY,
+        mousePressed,
+        paths,
+        zoom,
+        transformType,
+      },
+      viewBoxWidth,
+      viewBoxHeight,
+    } = this.props;
+    const tileWidth = tileSize * Math.sqrt(3);
+    const tileHeight = tileSize * 3;
 
-  return (
-    <div
-      onMouseMove={handleMouseMove}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      onWheel={handleWheel}
-      style={{
-        height: '100%',
-        width: '100%',
-        overflow: 'hidden',
-      }}
-    >
-      <Canvas
-        mousePageX={mousePageX}
-        mousePageY={mousePageY}
-        mousePressed={mousePressed}
-        zoom={zoom}
-        viewBoxWidth={viewBoxWidth}
-        viewBoxHeight={viewBoxHeight}
-        tileWidth={tileWidth}
-        tileHeight={tileHeight}
-        paths={transform(paths)}
-      />
-    </div>
-  );
-};
+    const transform = transforms[transformType](tileWidth, tileHeight);
 
-const App = compose(
+    return (
+      <div
+        onMouseMove={handleMouseMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
+        style={{
+          height: '100%',
+          width: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        <Canvas
+          mousePageX={mousePageX}
+          mousePageY={mousePageY}
+          mousePressed={mousePressed}
+          zoom={zoom}
+          viewBoxWidth={viewBoxWidth}
+          viewBoxHeight={viewBoxHeight}
+          tileWidth={tileWidth}
+          tileHeight={tileHeight}
+          paths={transform(paths)}
+        />
+      </div>
+    );
+  }
+}
+
+const App: Component<AppRequiredProps> = compose(
   withInternalReducer(getReducer, mapStateToProps, mapDispatchToProps),
   withViewBoxDimensions,
 )(PureApp);

@@ -43,12 +43,6 @@ const TAU = Math.PI * 2;
 const OY = 1.5;
 const OX = 1 / 2;
 
-const getCoordShiftAmount = (value, size) => -Math.floor(value / size) * size;
-
-const addToCoords = ({x: xDiff, y: yDiff}) =>
-  ({x, y}) => {
-    return {x: x + xDiff, y: y + yDiff};
-  };
 export const p3: TransformerFactory = (tileWidth, tileHeight) => {
   console.log(tileWidth, tileHeight);
   const matrices = [

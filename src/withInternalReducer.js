@@ -1,44 +1,53 @@
 // @flow
-import React, {Component} from 'react';
+import React from 'react';
 
 type Action = *;
 
 type Reducer<State> = (state?: State, action: Action) => State;
-type ReducerFactory<State, InputProps> = (props: InputProps) => Reducer<State>;
+type ReducerFactory<State> = <RequiredProps: Object>(
+  props: RequiredProps,
+) => Reducer<State>;
 
-type StateMapper<State, Props> = (state: State) => Props;
+type StateMapper<State, StateMappedProps: Object> = (
+  state: State,
+) => StateMappedProps;
 type Dispatcher = (action: Action) => void;
-type DispatchMapper<Props> = (dispatch: Dispatcher) => Props;
+type DispatchMapper<DispatchMappedProps: Object> = (
+  dispatch: Dispatcher,
+) => DispatchMappedProps;
 
-const withInternalReducer = <InputProps: Object, State, Props: Object>(
-  getReducer: ReducerFactory<State, InputProps>,
-  mapStateToProps: StateMapper<State, Props>,
-  mapDispatchToProps: DispatchMapper<Props>
-) =>
-  (WrappedComponent: Component<*, Props, *>) => {
-    return class extends React.Component {
-      props: InputProps;
+import type {Component, Provider} from './types';
 
-      state: State = getReducer(this.props)(undefined, {
+const withInternalReducer = <S, SMP: Object, DMP: Object>(
+  getReducer: ReducerFactory<S>,
+  mapStateToProps: StateMapper<S, SMP>,
+  mapDispatchToProps: DispatchMapper<DMP>,
+): Provider<SMP & DMP> =>
+  <RP: Object>(WrappedComponent: Component<SMP & DMP & RP>): Component<RP> => {
+    class WithInternalReducer extends React.Component {
+      props: RP;
+
+      state = getReducer(this.props)(undefined, {
         type: '@@INIT',
       });
 
-      dispatch: Dispatcher = (action: Action) => {
-        this.setState((state: State, props: InputProps) => {
+      dispatch = (action: Action) => {
+        this.setState((state: S, props: RP) => {
           return getReducer(props)(state, action);
         });
       };
 
       render() {
         const props = {
+          ...this.props,
           ...mapStateToProps(this.state),
           ...mapDispatchToProps(this.dispatch),
         };
-
-        // $FlowFixMe
         return <WrappedComponent {...props} />;
       }
-    };
+    }
+
+    return WithInternalReducer;
   };
 
 export default withInternalReducer;
