@@ -1,0 +1,92 @@
+{
+  "name": "namuol/patturn",
+  "version": "0.1.4",
+  "libraries": {
+    "xv": "^1.1.25"
+  },
+  "title": "Patturn",
+  "branch": "gh-pages",
+  "style": {
+    "name": "Brutalist",
+    "componentSet": {
+      "nav": "nav/BasicNav",
+      "header": "header/BasicHeader",
+      "article": "article/MarkdownArticle",
+      "footer": "footer/BasicFooter"
+    },
+    "fontFamily": "Consolas, \"Liberation Mono\", Menlo, Courier, monospace",
+    "heading": {},
+    "typeScale": [
+      48,
+      32,
+      20,
+      18,
+      16,
+      14,
+      12
+    ],
+    "layout": {
+      "maxWidth": 1024,
+      "fluid": true
+    },
+    "colors": {
+      "text": "#333",
+      "background": "#fff",
+      "primary": "#666",
+      "secondary": "#888",
+      "highlight": "#1f80ff",
+      "muted": "#f6f6f6",
+      "border": "#eee"
+    }
+  },
+  "content": [
+    {
+      "component": "nav",
+      "links": [
+        {
+          "href": "http://lou.wtf/patturn",
+          "text": "Home"
+        },
+        {
+          "href": "https://github.com/namuol/patturn",
+          "text": "GitHub"
+        },
+        {
+          "href": "https://npmjs.com/package/patturn",
+          "text": "npm"
+        }
+      ]
+    },
+    {
+      "component": "header",
+      "heading": "patturn",
+      "subhead": "Experimental Wallpaper Group visual editor",
+      "children": [
+        {
+          "component": "ui/TweetButton",
+          "text": "patturn: Experimental Wallpaper Group visual editor",
+          "url": "http://lou.wtf/patturn"
+        },
+        {
+          "component": "ui/GithubButton",
+          "user": "namuol",
+          "repo": "patturn"
+        }
+      ],
+      "text": "v0.0.0"
+    },
+    {
+      "component": "footer",
+      "links": [
+        {
+          "href": "https://github.com/namuol/patturn",
+          "text": "GitHub"
+        },
+        {
+          "href": "https://github.com/namuol",
+          "text": "namuol"
+        }
+      ]
+    }
+  ]
+}
