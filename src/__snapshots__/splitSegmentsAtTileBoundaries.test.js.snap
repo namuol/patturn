@@ -2,40 +2,43 @@ exports[`test splits the path into 3 when crossing from the bottom 1`] = `
 Array [
   Object {
     "points": Array [
-      Array [
-        0,
-        20,
-      ],
-      Array [
-        0,
-        10,
-      ],
+      Object {
+        "x": 0,
+        "y": 20,
+      },
+      Object {
+        "x": 0,
+        "y": 10,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        0,
-        10,
-      ],
-      Array [
-        0,
-        -10,
-      ],
+      Object {
+        "x": 0,
+        "y": 10,
+      },
+      Object {
+        "x": 0,
+        "y": -10,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        0,
-        -10,
-      ],
-      Array [
-        0,
-        -20,
-      ],
+      Object {
+        "x": 0,
+        "y": -10,
+      },
+      Object {
+        "x": 0,
+        "y": -20,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;
@@ -44,40 +47,43 @@ exports[`test splits the path into 3 when crossing from the bottom far inside th
 Array [
   Object {
     "points": Array [
-      Array [
-        0,
-        520,
-      ],
-      Array [
-        0,
-        510,
-      ],
+      Object {
+        "x": 0,
+        "y": 520,
+      },
+      Object {
+        "x": 0,
+        "y": 510,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        0,
-        510,
-      ],
-      Array [
-        0,
-        490,
-      ],
+      Object {
+        "x": 0,
+        "y": 510,
+      },
+      Object {
+        "x": 0,
+        "y": 490,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        0,
-        490,
-      ],
-      Array [
-        0,
-        480,
-      ],
+      Object {
+        "x": 0,
+        "y": 490,
+      },
+      Object {
+        "x": 0,
+        "y": 480,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;
@@ -86,40 +92,43 @@ exports[`test splits the path into 3 when crossing from the left 1`] = `
 Array [
   Object {
     "points": Array [
-      Array [
-        20,
-        0,
-      ],
-      Array [
-        10,
-        0,
-      ],
+      Object {
+        "x": 20,
+        "y": 0,
+      },
+      Object {
+        "x": 10,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        10,
-        0,
-      ],
-      Array [
-        -10,
-        0,
-      ],
+      Object {
+        "x": 10,
+        "y": 0,
+      },
+      Object {
+        "x": -10,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        -10,
-        0,
-      ],
-      Array [
-        -20,
-        0,
-      ],
+      Object {
+        "x": -10,
+        "y": 0,
+      },
+      Object {
+        "x": -20,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;
@@ -128,40 +137,43 @@ exports[`test splits the path into 3 when crossing from the left far inside the 
 Array [
   Object {
     "points": Array [
-      Array [
-        520,
-        0,
-      ],
-      Array [
-        510,
-        0,
-      ],
+      Object {
+        "x": 520,
+        "y": 0,
+      },
+      Object {
+        "x": 510,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        510,
-        0,
-      ],
-      Array [
-        490,
-        0,
-      ],
+      Object {
+        "x": 510,
+        "y": 0,
+      },
+      Object {
+        "x": 490,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        490,
-        0,
-      ],
-      Array [
-        480,
-        0,
-      ],
+      Object {
+        "x": 490,
+        "y": 0,
+      },
+      Object {
+        "x": 480,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;
@@ -170,40 +182,43 @@ exports[`test splits the path into 3 when crossing from the right 1`] = `
 Array [
   Object {
     "points": Array [
-      Array [
-        -20,
-        0,
-      ],
-      Array [
-        -10,
-        0,
-      ],
+      Object {
+        "x": -20,
+        "y": 0,
+      },
+      Object {
+        "x": -10,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        -10,
-        0,
-      ],
-      Array [
-        10,
-        0,
-      ],
+      Object {
+        "x": -10,
+        "y": 0,
+      },
+      Object {
+        "x": 10,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        10,
-        0,
-      ],
-      Array [
-        20,
-        0,
-      ],
+      Object {
+        "x": 10,
+        "y": 0,
+      },
+      Object {
+        "x": 20,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;
@@ -212,40 +227,43 @@ exports[`test splits the path into 3 when crossing from the right far inside the
 Array [
   Object {
     "points": Array [
-      Array [
-        480,
-        0,
-      ],
-      Array [
-        490,
-        0,
-      ],
+      Object {
+        "x": 480,
+        "y": 0,
+      },
+      Object {
+        "x": 490,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        490,
-        0,
-      ],
-      Array [
-        510,
-        0,
-      ],
+      Object {
+        "x": 490,
+        "y": 0,
+      },
+      Object {
+        "x": 510,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        510,
-        0,
-      ],
-      Array [
-        520,
-        0,
-      ],
+      Object {
+        "x": 510,
+        "y": 0,
+      },
+      Object {
+        "x": 520,
+        "y": 0,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;
@@ -254,40 +272,43 @@ exports[`test splits the path into 3 when crossing from the top 1`] = `
 Array [
   Object {
     "points": Array [
-      Array [
-        0,
-        -20,
-      ],
-      Array [
-        0,
-        -10,
-      ],
+      Object {
+        "x": 0,
+        "y": -20,
+      },
+      Object {
+        "x": 0,
+        "y": -10,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        0,
-        -10,
-      ],
-      Array [
-        0,
-        10,
-      ],
+      Object {
+        "x": 0,
+        "y": -10,
+      },
+      Object {
+        "x": 0,
+        "y": 10,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        0,
-        10,
-      ],
-      Array [
-        0,
-        20,
-      ],
+      Object {
+        "x": 0,
+        "y": 10,
+      },
+      Object {
+        "x": 0,
+        "y": 20,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;
@@ -296,40 +317,43 @@ exports[`test splits the path into 3 when crossing from the top far inside the g
 Array [
   Object {
     "points": Array [
-      Array [
-        0,
-        480,
-      ],
-      Array [
-        0,
-        490,
-      ],
+      Object {
+        "x": 0,
+        "y": 480,
+      },
+      Object {
+        "x": 0,
+        "y": 490,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "intersectsGrid": true,
     "points": Array [
-      Array [
-        0,
-        490,
-      ],
-      Array [
-        0,
-        510,
-      ],
+      Object {
+        "x": 0,
+        "y": 490,
+      },
+      Object {
+        "x": 0,
+        "y": 510,
+      },
     ],
+    "strokeWidth": 0,
   },
   Object {
     "points": Array [
-      Array [
-        0,
-        510,
-      ],
-      Array [
-        0,
-        520,
-      ],
+      Object {
+        "x": 0,
+        "y": 510,
+      },
+      Object {
+        "x": 0,
+        "y": 520,
+      },
     ],
+    "strokeWidth": 0,
   },
 ]
 `;

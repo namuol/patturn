@@ -5,6 +5,7 @@ export type Point = {
 };
 export type Path = {
   points: Array<Point>,
+  strokeWidth: number,
   intersectsGrid?: boolean,
 };
 

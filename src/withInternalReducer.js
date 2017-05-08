@@ -33,6 +33,7 @@ const withInternalReducer = <S, SMP: Object, DMP: Object>(
 
       dispatch = (action: Action) => {
         this.setState((state: S, props: RP) => {
+          console.log(action.type, action, this.state);
           return getReducer(props)(state, action);
         });
       };

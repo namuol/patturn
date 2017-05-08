@@ -130,6 +130,7 @@ type TileProps = {
   tileHeight: number,
   tileWidth: number,
   zoom: number,
+  strokeWidth: number,
 };
 const Tile = (
   {
@@ -141,6 +142,7 @@ const Tile = (
     tileHeight,
     tileWidth,
     zoom,
+    strokeWidth,
   }: TileProps,
 ) => {
   const {x: tileMouseX, y: tileMouseY} = getTileCoordFromPageCoord({
@@ -192,11 +194,11 @@ const Tile = (
       height={tileHeight}
       patternUnits="userSpaceOnUse"
     >
-      {tilePaths.map(({points, intersectsGrid}, idx) => {
+      {tilePaths.map(({points, strokeWidth, intersectsGrid}, idx) => {
         if (intersectsGrid) {
           return (
             <TilablePolyline
-              strokeWidth={2}
+              strokeWidth={strokeWidth}
               stroke="black"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -210,7 +212,7 @@ const Tile = (
         } else {
           return (
             <polyline
-              strokeWidth={2}
+              strokeWidth={strokeWidth}
               stroke="black"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -234,7 +236,7 @@ const Tile = (
       <TileableCircle
         cx={tileMouseX}
         cy={tileMouseY}
-        r={2}
+        r={strokeWidth / 2}
         fill={mousePressed ? 'red' : 'rgba(0,0,0,0.2)'}
         tileWidth={tileWidth}
         tileHeight={tileHeight}
@@ -253,6 +255,7 @@ type CanvasProps = {
   mousePageX: number,
   mousePageY: number,
   mousePressed: boolean,
+  strokeWidth: number,
 };
 
 const Canvas = (
@@ -266,6 +269,7 @@ const Canvas = (
     tileHeight,
     paths,
     zoom,
+    strokeWidth,
   }: CanvasProps,
 ) => {
   let simplifiedPaths = paths;
@@ -294,6 +298,7 @@ const Canvas = (
         mousePressed={mousePressed}
         paths={simplifiedPaths}
         zoom={zoom}
+        strokeWidth={strokeWidth}
       />
       <rect
         width={viewBoxWidth / zoom}
@@ -307,11 +312,21 @@ const Canvas = (
 type State = {
   mousePageX: number,
   mousePageY: number,
+  strokeWidth: number,
   mousePressed: boolean,
   paths: Array<Path>,
   zoom: number,
   transformType: $Keys<typeof transforms>,
+  sizingStrokeWidth: boolean,
 };
+
+const keyMap: {
+  [key: string]: string,
+} = {
+  alt: 'TOGGLE_SIZING_STROKEWIDTH',
+};
+
+type MappedKey = $Keys<typeof keyMap>;
 
 type Action =
   | {
@@ -327,15 +342,19 @@ type Action =
   | {
       type: 'MOUSE_RELEASED',
     }
-  | {type: 'ZOOMED', payload: {amount: number}};
+  | {type: 'ZOOMED', payload: {amount: number}}
+  | {type: 'KEY_PRESSED', payload: MappedKey}
+  | {type: 'KEY_RELEASED', payload: MappedKey};
 
 const defaultState: State = {
   mousePageX: 0,
   mousePageY: 0,
+  strokeWidth: 2,
   zoom: 1,
   mousePressed: false,
   paths: [],
   transformType: 'p3',
+  sizingStrokeWidth: false,
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -357,6 +376,7 @@ const getReducer = () =>
         updatedPaths = [
           ...paths.slice(0, paths.length - 1),
           {
+            ...paths[paths.length - 1],
             points: [
               ...paths[paths.length - 1].points,
               {x: mousePageX, y: mousePageY},
@@ -376,11 +396,14 @@ const getReducer = () =>
     }
 
     if (action.type === 'MOUSE_PRESSED') {
-      const {mousePageX, mousePageY} = state;
+      const {mousePageX, mousePageY, strokeWidth} = state;
       return {
         ...state,
         mousePressed: true,
-        paths: [...state.paths, {points: [{x: mousePageX, y: mousePageY}]}],
+        paths: [
+          ...state.paths,
+          {points: [{x: mousePageX, y: mousePageY}], strokeWidth},
+        ],
       };
     }
 
@@ -392,12 +415,39 @@ const getReducer = () =>
     }
 
     if (action.type === 'ZOOMED') {
-      const {zoom} = state;
       const {payload: {amount}} = action;
+
+      if (state.sizingStrokeWidth) {
+        const {strokeWidth} = state;
+        return {
+          ...state,
+          strokeWidth: clamp(strokeWidth - amount * 0.1, 0.5, 20),
+        };
+      }
+
+      const {zoom} = state;
       return {
         ...state,
         zoom: clamp(zoom - amount * (zoom * 0.002), 0.5, 10),
       };
+    }
+
+    if (action.type === 'KEY_PRESSED') {
+      if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
+        return {
+          ...state,
+          sizingStrokeWidth: true,
+        };
+      }
+    }
+
+    if (action.type === 'KEY_RELEASED') {
+      if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
+        return {
+          ...state,
+          sizingStrokeWidth: false,
+        };
+      }
     }
 
     return state;
@@ -412,6 +462,8 @@ type AppHandlers = {
   handleMouseDown: (e: SyntheticMouseEvent) => void,
   handleMouseUp: (e: SyntheticMouseEvent) => void,
   handleWheel: (e: SyntheticWheelEvent) => void,
+  handleKeyDown: (e: SyntheticKeyboardEvent) => void,
+  handleKeyUp: (e: SyntheticKeyboardEvent) => void,
 };
 
 const mapDispatchToProps = (dispatch): AppHandlers => {
@@ -443,6 +495,26 @@ const mapDispatchToProps = (dispatch): AppHandlers => {
           amount: deltaY,
         },
       });
+    },
+
+    handleKeyDown: (event: SyntheticKeyboardEvent) => {
+      const key = keyMap[event.key.toLowerCase()];
+      if (key !== undefined) {
+        dispatch({
+          type: 'KEY_PRESSED',
+          payload: key,
+        });
+      }
+    },
+
+    handleKeyUp: (event: SyntheticKeyboardEvent) => {
+      const key = keyMap[event.key.toLowerCase()];
+      if (key !== undefined) {
+        dispatch({
+          type: 'KEY_RELEASED',
+          payload: key,
+        });
+      }
     },
   };
 };
@@ -507,6 +579,8 @@ class PureApp extends React.Component {
       handleMouseDown,
       handleMouseUp,
       handleWheel,
+      handleKeyDown,
+      handleKeyUp,
       tileSize,
       state: {
         mousePageX,
@@ -515,6 +589,7 @@ class PureApp extends React.Component {
         paths,
         zoom,
         transformType,
+        strokeWidth,
       },
       viewBoxWidth,
       viewBoxHeight,
@@ -530,6 +605,9 @@ class PureApp extends React.Component {
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        tabIndex={1}
         style={{
           height: '100%',
           width: '100%',
@@ -546,6 +624,7 @@ class PureApp extends React.Component {
           tileWidth={tileWidth}
           tileHeight={tileHeight}
           paths={transform(paths)}
+          strokeWidth={strokeWidth}
         />
       </div>
     );
