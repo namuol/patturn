@@ -9,11 +9,30 @@ type TransformerFactory = (
   tileHeight: number,
 ) => Transformer;
 
+const getHexagonalTileDimensions = (
+  tileSize: number,
+): {tileWidth: number, tileHeight: number} => {
+  return {
+    tileWidth: tileSize * Math.sqrt(3),
+    tileHeight: tileSize * 3,
+  };
+};
+
+const getSquareTileDimensions = (
+  tileSize: number,
+): {tileWidth: number, tileHeight: number} => {
+  return {
+    tileWidth: tileSize,
+    tileHeight: tileSize,
+  };
+};
+
 // https://en.wikipedia.org/wiki/Wallpaper_group#Group_p1_.28o.29
 export const p1: TransformerFactory = () =>
   (paths: Array<Path>) => {
     return paths;
   };
+p1.getTileDimensions = getSquareTileDimensions;
 
 const makePathTransformer = transform =>
   (paths: Array<Path>) =>
@@ -37,6 +56,7 @@ export const p2: TransformerFactory = (tileWidth, tileHeight) => {
     return [...paths, ...transformPaths(paths)];
   };
 };
+p2.getTileDimensions = getSquareTileDimensions;
 
 const TAU = Math.PI * 2;
 
@@ -83,3 +103,4 @@ export const p3: TransformerFactory = (tileWidth, tileHeight) => {
     ];
   };
 };
+p3.getTileDimensions = getHexagonalTileDimensions;

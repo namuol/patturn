@@ -341,7 +341,7 @@ const defaultState: State = {
   paths: [],
   transformType: 'p3',
   sizingStrokeWidth: false,
-  smoothFactor: 0.3,
+  smoothFactor: 0.9,
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -383,13 +383,13 @@ const getReducer = () =>
     }
 
     if (action.type === 'MOUSE_PRESSED') {
-      const {mousePageX, mousePageY, strokeWidth} = state;
+      const {mousePageX, mousePageY, strokeWidth, smoothFactor} = state;
       return {
         ...state,
         mousePressed: true,
         paths: [
           ...state.paths,
-          {points: [{x: mousePageX, y: mousePageY}], strokeWidth},
+          {points: [{x: mousePageX, y: mousePageY}], strokeWidth, smoothFactor},
         ],
       };
     }
@@ -440,47 +440,68 @@ const getReducer = () =>
     return state;
   };
 
-const smoothPath = (a: number) =>
-  (path: Path) => {
-    const {points} = path;
-    if (points.length <= 4) {
-      return path;
-    }
+const smoothPath = (path: Path) => {
+  const {points, smoothFactor} = path;
+  if (points.length <= 4 || smoothFactor === 0) {
+    return path;
+  }
 
-    const smoothedPoints = points.reduce(
-      (smoothPoints, p1, idx) => {
-        if (idx === 0) {
-          return smoothPoints.concat({
-            x: p1.x,
-            y: p1.y,
-          });
-        }
-
-        const p0 = smoothPoints[idx - 1];
-
+  const smoothedPoints = points.reduce(
+    (smoothPoints, p1, idx) => {
+      if (idx === 0) {
         return smoothPoints.concat({
-          x: p1.x * (1 - a) + p0.x * a,
-          y: p1.y * (1 - a) + p0.y * a,
+          x: p1.x,
+          y: p1.y,
         });
-      },
-      [],
-    );
+      }
 
-    return {
-      ...path,
-      points: smoothedPoints,
-    };
+      const p0 = smoothPoints[idx - 1];
+
+      return smoothPoints.concat({
+        x: p1.x * (1 - smoothFactor) + p0.x * smoothFactor,
+        y: p1.y * (1 - smoothFactor) + p0.y * smoothFactor,
+      });
+    },
+    [],
+  );
+
+  return {
+    ...path,
+    points: smoothedPoints,
   };
+};
+
+import simplify from 'simplify-js';
 
 const mapStateToProps = (state: State): {state: State} => {
   if (state.smoothFactor === 0) {
     return {state};
   }
 
+  const {paths, mousePressed, zoom} = state;
+
+  const smoothedPaths = paths.map(smoothPath);
+
+  const simplifyPath = ({points, ...rest}) => ({
+    ...rest,
+    points: simplify(points, 0.5 / zoom, false),
+  });
+
+  let simplifiedPaths;
+
+  if (mousePressed) {
+    simplifiedPaths = smoothedPaths
+      .slice(0, -1)
+      .map(simplifyPath)
+      .concat(smoothedPaths.slice(-1));
+  } else {
+    simplifiedPaths = smoothedPaths.map(simplifyPath);
+  }
+
   return {
     state: {
       ...state,
-      paths: state.paths.map(smoothPath(state.smoothFactor)),
+      paths: simplifiedPaths,
     },
   };
 };
@@ -622,8 +643,12 @@ class PureApp extends React.Component {
       viewBoxWidth,
       viewBoxHeight,
     } = this.props;
-    const tileWidth = tileSize * Math.sqrt(3);
-    const tileHeight = tileSize * 3;
+
+    const transformBuilder = transforms[transformType];
+    const {
+      tileWidth,
+      tileHeight,
+    } = transformBuilder.getTileDimensions(tileSize);
 
     const transform = transforms[transformType](tileWidth, tileHeight);
 
