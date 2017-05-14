@@ -567,6 +567,8 @@ type ViewBoxProps = {
   viewBoxHeight: number,
 };
 
+import debounce from 'lodash.debounce';
+
 const withViewBoxDimensions: Provider<ViewBoxProps> = <VBRP: Object>(
   WrappedComponent: Component<VBRP & ViewBoxProps>,
 ): Component<VBRP> => {
@@ -577,24 +579,36 @@ const withViewBoxDimensions: Provider<ViewBoxProps> = <VBRP: Object>(
       viewBoxHeight: 0,
     };
 
+    __setViewBoxDimensions = debounce(
+      () => {
+        const element = ReactDOM.findDOMNode(this);
+
+        if (!element || typeof element.getBoundingClientRect !== 'function') {
+          return;
+        }
+
+        const {
+          width,
+          height,
+        }: {width: number, height: number} = element.getBoundingClientRect();
+        this.setState((state: ViewBoxProps) => {
+          return {
+            ...state,
+            viewBoxWidth: width,
+            viewBoxHeight: height,
+          };
+        });
+      },
+      100,
+    );
+
     componentDidMount() {
-      const element = ReactDOM.findDOMNode(this);
+      window.addEventListener('resize', this.__setViewBoxDimensions);
+      this.__setViewBoxDimensions();
+    }
 
-      if (!element || typeof element.getBoundingClientRect !== 'function') {
-        return;
-      }
-
-      const {
-        width,
-        height,
-      }: {width: number, height: number} = element.getBoundingClientRect();
-      this.setState((state: ViewBoxProps) => {
-        return {
-          ...state,
-          viewBoxWidth: width,
-          viewBoxHeight: height,
-        };
-      });
+    componentWillUnmount() {
+      window.removeEventListener('resize', this.__setViewBoxDimensions);
     }
 
     render() {
