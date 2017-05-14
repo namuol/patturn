@@ -2,4 +2,4 @@
 
 Experimental Wallpaper Group toy/editor.
 
-![](http://i.imgur.com/rq2W4iT.gif)
+![](http://imgur.com/4lq9maL.gif)
