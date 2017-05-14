@@ -64,7 +64,6 @@ const OY = 1.5;
 const OX = 1 / 2;
 
 export const p3: TransformerFactory = (tileWidth, tileHeight) => {
-  console.log(tileWidth, tileHeight);
   const matrices = [
     new Matrix()
       .translate(tileWidth / 2, tileHeight / 2)

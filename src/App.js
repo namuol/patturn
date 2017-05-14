@@ -482,12 +482,15 @@ const mapStateToProps = (state: State): {state: State} => {
 
   const smoothedPaths = paths.map(smoothPath);
 
-  const simplifyPath = ({points, ...rest}) => ({
-    ...rest,
-    points: simplify(points, 0.5 / zoom, false),
-  });
+  const simplifyPath = ({points, ...rest}) =>
+    points.length < 2
+      ? {...rest, points} // simplify() chokes if we don't do this
+      : {
+          ...rest,
+          points: simplify(points, 0.5 / zoom, false),
+        };
 
-  let simplifiedPaths;
+  let simplifiedPaths = smoothedPaths;
 
   if (mousePressed) {
     simplifiedPaths = smoothedPaths
