@@ -225,15 +225,6 @@ const Tile = (
       })}
 
       <TileableCircle
-        cx={0}
-        cy={0}
-        r={3 / zoom}
-        fill="#faa"
-        tileWidth={tileWidth}
-        tileHeight={tileHeight}
-      />
-
-      <TileableCircle
         cx={tileMouseX}
         cy={tileMouseY}
         r={strokeWidth / 2}
@@ -341,7 +332,7 @@ const defaultState: State = {
   paths: [],
   transformType: 'p3',
   sizingStrokeWidth: false,
-  smoothFactor: 0.9,
+  smoothFactor: 0.75,
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -448,7 +439,7 @@ const smoothPath = (path: Path) => {
 
   const smoothedPoints = points.reduce(
     (smoothPoints, p1, idx) => {
-      if (idx === 0) {
+      if (idx === 0 || idx > points.length - 2) {
         return smoothPoints.concat({
           x: p1.x,
           y: p1.y,
