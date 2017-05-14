@@ -272,21 +272,6 @@ const Canvas = (
     strokeWidth,
   }: CanvasProps,
 ) => {
-  let simplifiedPaths = paths;
-  // const simplifyPath = ({points, ...rest}) => ({
-  //   ...rest,
-  //   points: simplify(points, 0.5 / zoom, true),
-  // });
-  //
-  // if (mousePressed) {
-  //   simplifiedPaths = paths
-  //     .slice(0, -1)
-  //     .map(simplifyPath)
-  //     .concat(paths.slice(-1));
-  // } else {
-  //   simplifiedPaths = paths.map(simplifyPath);
-  // }
-
   return (
     <svg viewBox={`0 0 ${viewBoxWidth / zoom} ${viewBoxHeight / zoom}`}>
       <Tile
@@ -296,7 +281,7 @@ const Canvas = (
         mousePageX={mousePageX}
         mousePageY={mousePageY}
         mousePressed={mousePressed}
-        paths={simplifiedPaths}
+        paths={paths}
         zoom={zoom}
         strokeWidth={strokeWidth}
       />
@@ -318,6 +303,7 @@ type State = {
   zoom: number,
   transformType: $Keys<typeof transforms>,
   sizingStrokeWidth: boolean,
+  smoothFactor: number,
 };
 
 const keyMap: {
@@ -355,6 +341,7 @@ const defaultState: State = {
   paths: [],
   transformType: 'p3',
   sizingStrokeWidth: false,
+  smoothFactor: 0.3,
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -453,8 +440,49 @@ const getReducer = () =>
     return state;
   };
 
+const smoothPath = (a: number) =>
+  (path: Path) => {
+    const {points} = path;
+    if (points.length <= 4) {
+      return path;
+    }
+
+    const smoothedPoints = points.reduce(
+      (smoothPoints, p1, idx) => {
+        if (idx === 0) {
+          return smoothPoints.concat({
+            x: p1.x,
+            y: p1.y,
+          });
+        }
+
+        const p0 = smoothPoints[idx - 1];
+
+        return smoothPoints.concat({
+          x: p1.x * (1 - a) + p0.x * a,
+          y: p1.y * (1 - a) + p0.y * a,
+        });
+      },
+      [],
+    );
+
+    return {
+      ...path,
+      points: smoothedPoints,
+    };
+  };
+
 const mapStateToProps = (state: State): {state: State} => {
-  return {state};
+  if (state.smoothFactor === 0) {
+    return {state};
+  }
+
+  return {
+    state: {
+      ...state,
+      paths: state.paths.map(smoothPath(state.smoothFactor)),
+    },
+  };
 };
 
 type AppHandlers = {
