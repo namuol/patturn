@@ -78,8 +78,13 @@ const TileableCircle = (
   );
 };
 
+const round = (number, precision) => {
+  const factor = Math.pow(10, precision);
+  return Math.round(number * factor) / factor;
+};
+
 const getPolylinePointsString = (points: Array<Point>) => {
-  return points.map(({x, y}) => [x, y].join(',')).join(' ');
+  return points.map(({x, y}) => [round(x, 2), round(y, 2)].join(',')).join(' ');
 };
 
 const TilablePolyline = (
@@ -218,7 +223,7 @@ const Tile = (
               strokeLinejoin="round"
               fill="none"
               key={idx}
-              points={points.map(({x, y}) => [x, y].join(',')).join(' ')}
+              points={getPolylinePointsString(points)}
             />
           );
         }
@@ -295,12 +300,15 @@ type State = {
   transformType: $Keys<typeof transforms>,
   sizingStrokeWidth: boolean,
   smoothFactor: number,
+  mode: 'pen' | 'line',
 };
 
 const keyMap: {
   [key: string]: string,
 } = {
   alt: 'TOGGLE_SIZING_STROKEWIDTH',
+  l: 'SET_LINE_MODE',
+  p: 'SET_PEN_MODE',
 };
 
 type MappedKey = $Keys<typeof keyMap>;
@@ -333,6 +341,7 @@ const defaultState: State = {
   transformType: 'p3',
   sizingStrokeWidth: false,
   smoothFactor: 0.75,
+  mode: 'pen',
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -350,19 +359,33 @@ const getReducer = () =>
 
       let updatedPaths;
 
-      if (state.mousePressed) {
-        updatedPaths = [
-          ...paths.slice(0, paths.length - 1),
-          {
-            ...paths[paths.length - 1],
-            points: [
-              ...paths[paths.length - 1].points,
-              {x: mousePageX, y: mousePageY},
-            ],
-          },
-        ];
-      } else {
+      if (!state.mousePressed) {
         updatedPaths = paths;
+      } else {
+        if (state.mode === 'pen') {
+          updatedPaths = [
+            ...paths.slice(0, paths.length - 1),
+            {
+              ...paths[paths.length - 1],
+              points: [
+                ...paths[paths.length - 1].points,
+                {x: mousePageX, y: mousePageY},
+              ],
+            },
+          ];
+        } else {
+          // state.mode === 'line'
+          updatedPaths = [
+            ...paths.slice(0, paths.length - 1),
+            {
+              ...paths[paths.length - 1],
+              points: [
+                paths[paths.length - 1].points[0],
+                {x: mousePageX, y: mousePageY},
+              ],
+            },
+          ];
+        }
       }
 
       return {
@@ -417,6 +440,14 @@ const getReducer = () =>
           sizingStrokeWidth: true,
         };
       }
+
+      if (action.payload === 'SET_PEN_MODE') {
+        return {...state, mode: 'pen'};
+      }
+
+      if (action.payload === 'SET_LINE_MODE') {
+        return {...state, mode: 'line'};
+      }
     }
 
     if (action.type === 'KEY_RELEASED') {
@@ -465,11 +496,7 @@ const smoothPath = (path: Path) => {
 import simplify from 'simplify-js';
 
 const mapStateToProps = (state: State): {state: State} => {
-  if (state.smoothFactor === 0) {
-    return {state};
-  }
-
-  const {paths, mousePressed, zoom} = state;
+  const {paths, zoom} = state;
 
   const smoothedPaths = paths.map(smoothPath);
 
@@ -481,21 +508,10 @@ const mapStateToProps = (state: State): {state: State} => {
           points: simplify(points, 0.5 / zoom, false),
         };
 
-  let simplifiedPaths = smoothedPaths;
-
-  if (mousePressed) {
-    simplifiedPaths = smoothedPaths
-      .slice(0, -1)
-      .map(simplifyPath)
-      .concat(smoothedPaths.slice(-1));
-  } else {
-    simplifiedPaths = smoothedPaths.map(simplifyPath);
-  }
-
   return {
     state: {
       ...state,
-      paths: simplifiedPaths,
+      paths: smoothedPaths.map(simplifyPath),
     },
   };
 };
