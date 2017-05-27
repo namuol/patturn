@@ -340,8 +340,8 @@ const defaultState: State = {
   paths: [],
   transformType: 'p3',
   sizingStrokeWidth: false,
-  smoothFactor: 0.75,
-  mode: 'pen',
+  smoothFactor: 0.5,
+  mode: 'line',
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -398,12 +398,17 @@ const getReducer = () =>
 
     if (action.type === 'MOUSE_PRESSED') {
       const {mousePageX, mousePageY, strokeWidth, smoothFactor} = state;
+      const {pageX, pageY} = action.payload;
       return {
         ...state,
         mousePressed: true,
         paths: [
           ...state.paths,
-          {points: [{x: mousePageX, y: mousePageY}], strokeWidth, smoothFactor},
+          {
+            points: [{x: pageX || mousePageX, y: pageY || mousePageY}],
+            strokeWidth,
+            smoothFactor,
+          },
         ],
       };
     }
@@ -517,8 +522,11 @@ const mapStateToProps = (state: State): {state: State} => {
 };
 
 type AppHandlers = {
-  handleMouseMove: (e: SyntheticMouseEvent) => void,
+  handleTouchStart: (e: SyntheticTouchEvent) => void,
+  handleTouchMove: (e: SyntheticTouchEvent) => void,
+  handleTouchEnd: (e: SyntheticTouchEvent) => void,
   handleMouseDown: (e: SyntheticMouseEvent) => void,
+  handleMouseMove: (e: SyntheticMouseEvent) => void,
   handleMouseUp: (e: SyntheticMouseEvent) => void,
   handleWheel: (e: SyntheticWheelEvent) => void,
   handleKeyDown: (e: SyntheticKeyboardEvent) => void,
@@ -527,7 +535,37 @@ type AppHandlers = {
 
 const mapDispatchToProps = (dispatch): AppHandlers => {
   return {
+    handleTouchMove: (event: SyntheticTouchEvent) => {
+      event.preventDefault();
+
+      const {changedTouches: [{pageX, pageY}]} = event;
+      dispatch({
+        type: 'MOUSE_MOVED',
+        payload: {
+          pageX,
+          pageY,
+        },
+      });
+    },
+    handleTouchStart: (event: SyntheticTouchEvent) => {
+      event.preventDefault();
+
+      const {changedTouches: [{pageX, pageY}]} = event;
+      dispatch({
+        type: 'MOUSE_PRESSED',
+        payload: {
+          pageX,
+          pageY,
+        },
+      });
+    },
+    handleTouchEnd: () => {
+      event.preventDefault();
+      dispatch({type: 'MOUSE_RELEASED'});
+    },
+
     handleMouseMove: (event: SyntheticMouseEvent) => {
+      event.preventDefault();
       const {pageX, pageY} = event;
       dispatch({
         type: 'MOUSE_MOVED',
@@ -538,10 +576,11 @@ const mapDispatchToProps = (dispatch): AppHandlers => {
       });
     },
     handleMouseDown: () => {
+      event.preventDefault();
       dispatch({type: 'MOUSE_PRESSED'});
     },
-
     handleMouseUp: () => {
+      event.preventDefault();
       dispatch({type: 'MOUSE_RELEASED'});
     },
 
@@ -648,6 +687,9 @@ class PureApp extends React.Component {
   props: Props;
   render() {
     const {
+      handleTouchStart,
+      handleTouchMove,
+      handleTouchEnd,
       handleMouseMove,
       handleMouseDown,
       handleMouseUp,
@@ -678,8 +720,11 @@ class PureApp extends React.Component {
 
     return (
       <div
-        onMouseMove={handleMouseMove}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
         onKeyDown={handleKeyDown}
