@@ -27,7 +27,8 @@
     "flow": "flow",
     "storybook": "start-storybook -p 9009 -s public",
     "build-storybook": "build-storybook -s public",
-    "precommit": "lint-staged"
+    "precommit": "lint-staged",
+    "deploy": "npm run build && cd build && deploy"
   },
   "lint-staged": {
     "*.js": [

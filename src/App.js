@@ -323,6 +323,10 @@ type Action =
     }
   | {
       type: 'MOUSE_PRESSED',
+      payload?: {
+        pageX: number,
+        pageY: number,
+      },
     }
   | {
       type: 'MOUSE_RELEASED',
@@ -398,7 +402,7 @@ const getReducer = () =>
 
     if (action.type === 'MOUSE_PRESSED') {
       const {mousePageX, mousePageY, strokeWidth, smoothFactor} = state;
-      const {pageX, pageY} = action.payload;
+      const {pageX, pageY} = action.payload || {};
       return {
         ...state,
         mousePressed: true,
