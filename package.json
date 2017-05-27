@@ -28,7 +28,7 @@
     "storybook": "start-storybook -p 9009 -s public",
     "build-storybook": "build-storybook -s public",
     "precommit": "lint-staged",
-    "deploy": "npm run build && cd build && deploy"
+    "deploy": "npm run build && cd build && rm static/js/*.map && echo {\\\"alias\\\": \\\"patturn.now.sh\\\"} > now.json && now && now ln"
   },
   "lint-staged": {
     "*.js": [
