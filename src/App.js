@@ -199,12 +199,12 @@ const Tile = (
       height={tileHeight}
       patternUnits="userSpaceOnUse"
     >
-      {tilePaths.map(({points, strokeWidth, intersectsGrid}, idx) => {
+      {tilePaths.map(({points, strokeWidth, color, intersectsGrid}, idx) => {
         if (intersectsGrid) {
           return (
             <TilablePolyline
               strokeWidth={strokeWidth}
-              stroke="black"
+              stroke={color}
               strokeLinecap="round"
               strokeLinejoin="round"
               key={idx}
@@ -218,7 +218,7 @@ const Tile = (
           return (
             <polyline
               strokeWidth={strokeWidth}
-              stroke="black"
+              stroke={color}
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
@@ -334,7 +334,9 @@ type Action =
     }
   | {type: 'ZOOMED', payload: {amount: number}}
   | {type: 'KEY_PRESSED', payload: MappedKey}
-  | {type: 'KEY_RELEASED', payload: MappedKey};
+  | {type: 'KEY_RELEASED', payload: MappedKey}
+  | {type: 'COLOR_CHANGED', payload: Color}
+  | {type: 'STROKE_WIDTH_CHANGED', payload: number};
 
 import {BASECOLORS} from './Controls';
 const defaultState: State = {
@@ -347,7 +349,7 @@ const defaultState: State = {
   transformType: 'p3',
   sizingStrokeWidth: false,
   smoothFactor: 0.5,
-  color: BASECOLORS[4],
+  color: BASECOLORS[0],
   mode: 'line',
 };
 
@@ -404,7 +406,7 @@ const getReducer = () =>
     }
 
     if (action.type === 'MOUSE_PRESSED') {
-      const {mousePageX, mousePageY, strokeWidth, smoothFactor} = state;
+      const {mousePageX, mousePageY, strokeWidth, smoothFactor, color} = state;
       const {pageX, pageY} = action.payload || {};
       return {
         ...state,
@@ -415,6 +417,7 @@ const getReducer = () =>
             points: [{x: pageX || mousePageX, y: pageY || mousePageY}],
             strokeWidth,
             smoothFactor,
+            color,
           },
         ],
       };
@@ -469,6 +472,20 @@ const getReducer = () =>
           sizingStrokeWidth: false,
         };
       }
+    }
+
+    if (action.type === 'COLOR_CHANGED') {
+      return {
+        ...state,
+        color: action.payload,
+      };
+    }
+
+    if (action.type === 'STROKE_WIDTH_CHANGED') {
+      return {
+        ...state,
+        strokeWidth: action.payload,
+      };
     }
 
     return state;
@@ -538,6 +555,8 @@ type AppHandlers = {
   handleWheel: (e: SyntheticWheelEvent) => void,
   handleKeyDown: (e: SyntheticKeyboardEvent) => void,
   handleKeyUp: (e: SyntheticKeyboardEvent) => void,
+  handleColorChanged: (color: Color) => void,
+  handleStrokeWidthChanged: (strokeWidth: number) => void,
 };
 
 const mapDispatchToProps = (dispatch): AppHandlers => {
@@ -620,6 +639,20 @@ const mapDispatchToProps = (dispatch): AppHandlers => {
           payload: key,
         });
       }
+    },
+
+    handleColorChanged: color => {
+      dispatch({
+        type: 'COLOR_CHANGED',
+        payload: color,
+      });
+    },
+
+    handleStrokeWidthChanged: strokeWidth => {
+      dispatch({
+        type: 'STROKE_WIDTH_CHANGED',
+        payload: strokeWidth,
+      });
     },
   };
 };
@@ -705,6 +738,8 @@ class PureApp extends React.Component {
       handleWheel,
       handleKeyDown,
       handleKeyUp,
+      handleColorChanged,
+      handleStrokeWidthChanged,
       tileSize,
       state: {
         mousePageX,
@@ -746,7 +781,12 @@ class PureApp extends React.Component {
           overflow: 'hidden',
         }}
       >
-        <Controls color={color} strokeWidth={strokeWidth} />
+        <Controls
+          color={color}
+          strokeWidth={strokeWidth}
+          onColorChanged={handleColorChanged}
+          onStrokeWidthChanged={handleStrokeWidthChanged}
+        />
         <Canvas
           mousePageX={mousePageX}
           mousePageY={mousePageY}

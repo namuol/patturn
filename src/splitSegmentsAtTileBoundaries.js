@@ -14,10 +14,14 @@ const crossesGrid = (v1, v2, size) => {
 };
 
 const splitPathAtTileBoundaries = (
-  {path: {points, strokeWidth, smoothFactor}, tileWidth, tileHeight}: Params,
+  {
+    path: {points, strokeWidth, color, smoothFactor},
+    tileWidth,
+    tileHeight,
+  }: Params,
 ): Array<Path> => {
   let lastPoint = points[0];
-  const paths = [{points: [lastPoint], strokeWidth, smoothFactor}];
+  const paths = [{points: [lastPoint], strokeWidth, smoothFactor, color}];
   for (let index = 1; index < points.length; index += 1) {
     const point = points[index];
     const {x: x1, y: y1} = lastPoint;
@@ -30,8 +34,9 @@ const splitPathAtTileBoundaries = (
           intersectsGrid: true,
           strokeWidth,
           smoothFactor,
+          color,
         },
-        {points: [point], strokeWidth, smoothFactor},
+        {points: [point], strokeWidth, smoothFactor, color},
       );
     } else {
       paths[paths.length - 1].points.push(point);

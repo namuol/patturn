@@ -10,11 +10,11 @@ it('returns a _set_ of paths', () => {
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
-  ).toEqual([{points, strokeWidth: 0, smoothFactor: 0}]);
+  ).toEqual([{points, strokeWidth: 0, smoothFactor: 0, color: '#000000'}]);
 });
 
 it('splits the path into 3 when crossing from the left', () => {
@@ -28,7 +28,7 @@ it('splits the path into 3 when crossing from the left', () => {
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
@@ -46,7 +46,7 @@ it('splits the path into 3 when crossing from the right', () => {
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
@@ -64,7 +64,7 @@ it('splits the path into 3 when crossing from the left far inside the grid', () 
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
@@ -82,7 +82,7 @@ it('splits the path into 3 when crossing from the right far inside the grid', ()
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
@@ -102,7 +102,7 @@ it('splits the path into 3 when crossing from the bottom', () => {
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
@@ -120,7 +120,7 @@ it('splits the path into 3 when crossing from the top', () => {
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
@@ -138,7 +138,7 @@ it('splits the path into 3 when crossing from the bottom far inside the grid', (
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),
@@ -156,7 +156,7 @@ it('splits the path into 3 when crossing from the top far inside the grid', () =
 
   expect(
     splitSegmentsAtTileBoundaries({
-      path: {points, strokeWidth: 0, smoothFactor: 0},
+      path: {points, strokeWidth: 0, smoothFactor: 0, color: '#000000'},
       tileWidth: 100,
       tileHeight: 100,
     }),

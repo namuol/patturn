@@ -9,6 +9,8 @@ import {cadence} from './theme';
 import type {Component, Color} from './types';
 import withInternalReducer from './withInternalReducer';
 
+const noop = () => {};
+
 const styles = StyleSheet.create({
   control: {
     boxSizing: 'border-box',
@@ -112,16 +114,23 @@ const StrokeWidthIcon = (props: StrokeWidthIconProps) => {
   );
 };
 
+const getStrokeWidthChangeHandler = onChange =>
+// $FlowFixMe
+  !onChange ? noop : strokeWidth => () => onChange(strokeWidth);
+
 const STROKE_WIDTHS = [1, 2, 4, 8, 14];
 type StrokeWidthDropdownProps = {
   strokeWidth: number,
+  onChange?: (strokeWidth: number) => *,
 };
 const StrokeWidthDropdown = (props: StrokeWidthDropdownProps) => {
+  const {onChange} = props;
   return (
     <View style={styles.strokeWidthDropdown}>
       {STROKE_WIDTHS.map(strokeWidth => (
         <Control
           selected={strokeWidth === props.strokeWidth}
+          onPress={getStrokeWidthChangeHandler(onChange)(strokeWidth)}
           icon={<StrokeWidthIcon strokeWidth={strokeWidth} />}
         />
       ))}
@@ -244,10 +253,16 @@ const getSelectedBaseColor = (color: Color) => {
   return SHADESMAP[color];
 };
 
+const getColorChangedHandler = onChange =>
+// $FlowFixMe
+  !onChange ? noop : color => () => onChange(color);
+
 type ColorDropdownProps = {
   color: Color,
+  onChange?: (color: Color) => any,
 };
 const ColorDropdown = (props: ColorDropdownProps) => {
+  const {onChange} = props;
   const selectedBaseColor = getSelectedBaseColor(props.color);
   let selectedShadeIndex = 3;
   const shades = SHADES[selectedBaseColor].map((shade, idx) => {
@@ -258,6 +273,7 @@ const ColorDropdown = (props: ColorDropdownProps) => {
     return (
       <Control
         key={shade}
+        onPress={getColorChangedHandler(onChange)(shade)}
         selected={selected}
         icon={<ColorIcon color={shade} />}
       />
@@ -269,6 +285,7 @@ const ColorDropdown = (props: ColorDropdownProps) => {
       {BASECOLORS.map((baseColor, idx) => (
         <Control
           key={baseColor}
+          onPress={getColorChangedHandler(onChange)(baseColor)}
           selected={baseColor === selectedBaseColor}
           icon={
             <ColorIcon
@@ -294,7 +311,12 @@ const ColorDropdown = (props: ColorDropdownProps) => {
   );
 };
 
-const noop = () => {};
+type RequiredProps = {
+  color: Color,
+  strokeWidth: number,
+  onStrokeWidthChanged?: (strokeWidth: number) => *,
+  onColorChanged?: (color: Color) => *,
+};
 
 type State = {
   mode: 'default' | 'color' | 'strokeWidth',
@@ -320,6 +342,17 @@ const getReducer = () =>
       };
     }
 
+    if (
+      action.type === 'OVERLAY_PRESSED' ||
+      action.type === 'STROKE_WIDTH_CHANGED' ||
+      action.type === 'COLOR_CHANGED'
+    ) {
+      return {
+        ...state,
+        mode: 'default',
+      };
+    }
+
     return state;
   };
 
@@ -328,9 +361,12 @@ const mapStateToProps = state => ({state});
 type Handlers = {
   handleColorControlPressed: () => void,
   handleStrokeWidthControlPressed: () => void,
+  handleOverlayPressed: () => void,
+  handleStrokeWidthChanged: (strokeWidth: number) => void,
+  handleColorChanged: (color: Color) => void,
 };
 
-const mapDispatchToProps = (dispatch): Handlers => ({
+const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => ({
   handleColorControlPressed: () => {
     dispatch({
       type: 'COLOR_CONTROL_PRESSED',
@@ -342,12 +378,31 @@ const mapDispatchToProps = (dispatch): Handlers => ({
       type: 'STROKE_WIDTH_CONTROL_PRESSED',
     });
   },
-});
 
-type RequiredProps = {
-  color: Color,
-  strokeWidth: number,
-};
+  handleOverlayPressed: () => {
+    dispatch({
+      type: 'OVERLAY_PRESSED',
+    });
+  },
+
+  handleStrokeWidthChanged: strokeWidth => {
+    dispatch({
+      type: 'STROKE_WIDTH_CHANGED',
+      payload: strokeWidth,
+    });
+
+    ownProps.onStrokeWidthChanged && ownProps.onStrokeWidthChanged(strokeWidth);
+  },
+
+  handleColorChanged: color => {
+    dispatch({
+      type: 'COLOR_CHANGED',
+      payload: color,
+    });
+
+    ownProps.onColorChanged && ownProps.onColorChanged(color);
+  },
+});
 
 type Props = RequiredProps & Handlers & {
   state: State,
@@ -358,6 +413,9 @@ const PureControls = (props: Props) => {
     strokeWidth,
     handleColorControlPressed,
     handleStrokeWidthControlPressed,
+    handleOverlayPressed,
+    handleStrokeWidthChanged,
+    handleColorChanged,
     state: {
       mode,
     },
@@ -377,12 +435,19 @@ const PureControls = (props: Props) => {
       <Control onPress={noop} icon="↩️" />
       <Control onPress={noop} icon="↪️" />
 
-      {mode !== 'default' && <View style={styles.controlsOverlay} />}
+      {mode !== 'default' &&
+        <Touchable onPress={handleOverlayPressed}>
+          <View style={styles.controlsOverlay} />
+        </Touchable>}
 
       {mode === 'strokeWidth' &&
-        <StrokeWidthDropdown strokeWidth={strokeWidth} />}
+        <StrokeWidthDropdown
+          onChange={handleStrokeWidthChanged}
+          strokeWidth={strokeWidth}
+        />}
 
-      {mode === 'color' && <ColorDropdown color={color} />}
+      {mode === 'color' &&
+        <ColorDropdown onChange={handleColorChanged} color={color} />}
     </View>
   );
 };

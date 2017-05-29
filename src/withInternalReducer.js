@@ -10,10 +10,12 @@ type ReducerFactory<State> = <RequiredProps: Object>(
 
 type StateMapper<State, StateMappedProps: Object> = (
   state: State,
+  ownProps: *,
 ) => StateMappedProps;
 type Dispatcher = (action: Action) => void;
 type DispatchMapper<DispatchMappedProps: Object> = (
   dispatch: Dispatcher,
+  ownProps: *,
 ) => DispatchMappedProps;
 
 import type {Component, Provider} from './types';
@@ -43,8 +45,8 @@ const withInternalReducer = <S, SMP: Object, DMP: Object>(
       render() {
         const props = {
           ...this.props,
-          ...mapStateToProps(this.state),
-          ...mapDispatchToProps(this.dispatch),
+          ...mapStateToProps(this.state, this.props),
+          ...mapDispatchToProps(this.dispatch, this.props),
         };
         return <WrappedComponent {...props} />;
       }
