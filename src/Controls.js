@@ -79,6 +79,13 @@ const styles = StyleSheet.create({
   },
 });
 
+const stop = fn =>
+  e => {
+    e && e.preventDefault && e.preventDefault();
+    e && e.stopPropagation && e.stopPropagation();
+    fn && fn(e);
+  };
+
 type ControlProps = {
   onPress?: () => void,
   icon: any,
@@ -86,7 +93,7 @@ type ControlProps = {
 };
 const Control = (props: ControlProps) => {
   return (
-    <Touchable onPress={props.onPress}>
+    <Touchable onPressIn={stop(props.onPress)}>
       <View style={[styles.control, props.selected && styles.selected]}>
         <View style={props.disabled && styles.disabled}>
           {props.icon}
@@ -316,6 +323,7 @@ type RequiredProps = {
   strokeWidth: number,
   onStrokeWidthChanged?: (strokeWidth: number) => *,
   onColorChanged?: (color: Color) => *,
+  dispatch?: (*) => *,
 };
 
 type State = {
@@ -366,43 +374,55 @@ type Handlers = {
   handleColorChanged: (color: Color) => void,
 };
 
-const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => ({
-  handleColorControlPressed: () => {
-    dispatch({
-      type: 'COLOR_CONTROL_PRESSED',
-    });
-  },
+const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => {
+  if (ownProps.dispatch) {
+    const externalDispatch = ownProps.dispatch;
+    const internalDispatch = dispatch;
+    dispatch = (...args) => {
+      internalDispatch(...args);
+      externalDispatch(...args);
+    };
+  }
 
-  handleStrokeWidthControlPressed: () => {
-    dispatch({
-      type: 'STROKE_WIDTH_CONTROL_PRESSED',
-    });
-  },
+  return {
+    handleColorControlPressed: () => {
+      dispatch({
+        type: 'COLOR_CONTROL_PRESSED',
+      });
+    },
 
-  handleOverlayPressed: () => {
-    dispatch({
-      type: 'OVERLAY_PRESSED',
-    });
-  },
+    handleStrokeWidthControlPressed: () => {
+      dispatch({
+        type: 'STROKE_WIDTH_CONTROL_PRESSED',
+      });
+    },
 
-  handleStrokeWidthChanged: strokeWidth => {
-    dispatch({
-      type: 'STROKE_WIDTH_CHANGED',
-      payload: strokeWidth,
-    });
+    handleOverlayPressed: () => {
+      dispatch({
+        type: 'OVERLAY_PRESSED',
+      });
+    },
 
-    ownProps.onStrokeWidthChanged && ownProps.onStrokeWidthChanged(strokeWidth);
-  },
+    handleStrokeWidthChanged: strokeWidth => {
+      dispatch({
+        type: 'STROKE_WIDTH_CHANGED',
+        payload: strokeWidth,
+      });
 
-  handleColorChanged: color => {
-    dispatch({
-      type: 'COLOR_CHANGED',
-      payload: color,
-    });
+      ownProps.onStrokeWidthChanged &&
+        ownProps.onStrokeWidthChanged(strokeWidth);
+    },
 
-    ownProps.onColorChanged && ownProps.onColorChanged(color);
-  },
-});
+    handleColorChanged: color => {
+      dispatch({
+        type: 'COLOR_CHANGED',
+        payload: color,
+      });
+
+      ownProps.onColorChanged && ownProps.onColorChanged(color);
+    },
+  };
+};
 
 type Props = RequiredProps & Handlers & {
   state: State,

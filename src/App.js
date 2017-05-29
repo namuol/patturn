@@ -302,6 +302,7 @@ type State = {
   smoothFactor: number,
   color: Color,
   mode: 'pen' | 'line',
+  inputDisabled: boolean,
 };
 
 const keyMap: {
@@ -335,6 +336,9 @@ type Action =
   | {type: 'ZOOMED', payload: {amount: number}}
   | {type: 'KEY_PRESSED', payload: MappedKey}
   | {type: 'KEY_RELEASED', payload: MappedKey}
+  | {type: 'OVERLAY_PRESSED'}
+  | {type: 'COLOR_CONTROL_PRESSED'}
+  | {type: 'STROKE_WIDTH_CONTROL_PRESSED'}
   | {type: 'COLOR_CHANGED', payload: Color}
   | {type: 'STROKE_WIDTH_CHANGED', payload: number};
 
@@ -351,13 +355,14 @@ const defaultState: State = {
   smoothFactor: 0.5,
   color: BASECOLORS[0],
   mode: 'line',
+  inputDisabled: false,
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
 const getReducer = () =>
   (state: State = defaultState, action: Action) => {
-    if (action.type === 'MOUSE_MOVED') {
+    if (action.type === 'MOUSE_MOVED' && !state.inputDisabled) {
       const {paths, zoom} = state;
       const {
         pageX,
@@ -405,7 +410,7 @@ const getReducer = () =>
       };
     }
 
-    if (action.type === 'MOUSE_PRESSED') {
+    if (action.type === 'MOUSE_PRESSED' && !state.inputDisabled) {
       const {mousePageX, mousePageY, strokeWidth, smoothFactor, color} = state;
       const {pageX, pageY} = action.payload || {};
       return {
@@ -478,6 +483,7 @@ const getReducer = () =>
       return {
         ...state,
         color: action.payload,
+        inputDisabled: false,
       };
     }
 
@@ -485,6 +491,25 @@ const getReducer = () =>
       return {
         ...state,
         strokeWidth: action.payload,
+        inputDisabled: false,
+      };
+    }
+
+    if (
+      action.type === 'CONTROLS_PRESSED' ||
+      action.type === 'COLOR_CONTROL_PRESSED' ||
+      action.type === 'STROKE_WIDTH_CONTROL_PRESSED'
+    ) {
+      return {
+        ...state,
+        inputDisabled: true,
+      };
+    }
+
+    if (action.type === 'OVERLAY_PRESSED') {
+      return {
+        ...state,
+        inputDisabled: false,
       };
     }
 
@@ -546,6 +571,7 @@ const mapStateToProps = (state: State): {state: State} => {
 };
 
 type AppHandlers = {
+  dispatch: (*) => *,
   handleTouchStart: (e: SyntheticTouchEvent) => void,
   handleTouchMove: (e: SyntheticTouchEvent) => void,
   handleTouchEnd: (e: SyntheticTouchEvent) => void,
@@ -557,10 +583,12 @@ type AppHandlers = {
   handleKeyUp: (e: SyntheticKeyboardEvent) => void,
   handleColorChanged: (color: Color) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
+  handleControlsPressed: () => void,
 };
 
 const mapDispatchToProps = (dispatch): AppHandlers => {
   return {
+    dispatch,
     handleTouchMove: (event: SyntheticTouchEvent) => {
       event.preventDefault();
 
@@ -654,6 +682,10 @@ const mapDispatchToProps = (dispatch): AppHandlers => {
         payload: strokeWidth,
       });
     },
+
+    handleControlsPressed: () => {
+      dispatch({type: 'CONTROLS_PRESSED'});
+    },
   };
 };
 
@@ -740,7 +772,9 @@ class PureApp extends React.Component {
       handleKeyUp,
       handleColorChanged,
       handleStrokeWidthChanged,
+      handleControlsPressed,
       tileSize,
+      dispatch,
       state: {
         mousePageX,
         mousePageY,
@@ -750,6 +784,7 @@ class PureApp extends React.Component {
         transformType,
         strokeWidth,
         color,
+        inputDisabled,
       },
       viewBoxWidth,
       viewBoxHeight,
@@ -765,15 +800,15 @@ class PureApp extends React.Component {
 
     return (
       <div
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
-        onKeyDown={handleKeyDown}
-        onKeyUp={handleKeyUp}
+        onTouchStart={!inputDisabled && handleTouchStart}
+        onTouchMove={!inputDisabled && handleTouchMove}
+        onTouchEnd={!inputDisabled && handleTouchEnd}
+        onMouseDown={!inputDisabled && handleMouseDown}
+        onMouseMove={!inputDisabled && handleMouseMove}
+        onMouseUp={!inputDisabled && handleMouseUp}
+        onWheel={!inputDisabled && handleWheel}
+        onKeyDown={!inputDisabled && handleKeyDown}
+        onKeyUp={!inputDisabled && handleKeyUp}
         tabIndex={1}
         style={{
           height: '100%',
@@ -783,7 +818,9 @@ class PureApp extends React.Component {
       >
         <Controls
           color={color}
+          onPress={handleControlsPressed}
           strokeWidth={strokeWidth}
+          dispatch={dispatch}
           onColorChanged={handleColorChanged}
           onStrokeWidthChanged={handleStrokeWidthChanged}
         />
