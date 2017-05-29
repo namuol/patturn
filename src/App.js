@@ -8,7 +8,7 @@ import withInternalReducer from './withInternalReducer';
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
 import * as transforms from './wallpaperGroupTransforms';
 
-import type {Path, Point, Provider, Component} from './types';
+import type {Path, Point, Provider, Component, Color} from './types';
 
 const getCoordShiftAmount = (value, size) => -Math.floor(value / size) * size;
 
@@ -300,6 +300,7 @@ type State = {
   transformType: $Keys<typeof transforms>,
   sizingStrokeWidth: boolean,
   smoothFactor: number,
+  color: Color,
   mode: 'pen' | 'line',
 };
 
@@ -335,6 +336,7 @@ type Action =
   | {type: 'KEY_PRESSED', payload: MappedKey}
   | {type: 'KEY_RELEASED', payload: MappedKey};
 
+import {BASECOLORS} from './Controls';
 const defaultState: State = {
   mousePageX: 0,
   mousePageY: 0,
@@ -345,6 +347,7 @@ const defaultState: State = {
   transformType: 'p3',
   sizingStrokeWidth: false,
   smoothFactor: 0.5,
+  color: BASECOLORS[4],
   mode: 'line',
 };
 
@@ -687,6 +690,8 @@ type Props = AppRequiredProps & AppHandlers & ViewBoxProps & {
   state: State,
 };
 
+import Controls from './Controls';
+
 class PureApp extends React.Component {
   props: Props;
   render() {
@@ -709,6 +714,7 @@ class PureApp extends React.Component {
         zoom,
         transformType,
         strokeWidth,
+        color,
       },
       viewBoxWidth,
       viewBoxHeight,
@@ -740,6 +746,7 @@ class PureApp extends React.Component {
           overflow: 'hidden',
         }}
       >
+        <Controls color={color} strokeWidth={strokeWidth} />
         <Canvas
           mousePageX={mousePageX}
           mousePageY={mousePageY}

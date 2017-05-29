@@ -10,6 +10,8 @@ export type Path = {
   intersectsGrid?: boolean,
 };
 
+export type Color = string;
+
 export type FunctionComponent<A> = (props: A) => ?React$Element<any>;
 export type ClassComponent<D, A, S> = Class<React$Component<D, A, S>>;
 export type Component<A> = FunctionComponent<A> | ClassComponent<any, A, any>;
