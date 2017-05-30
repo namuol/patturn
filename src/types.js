@@ -3,6 +3,7 @@ export type Point = {
   x: number,
   y: number,
 };
+export type Tool = 'pen' | 'line';
 export type Color = string;
 export type Path = {
   points: Array<Point>,

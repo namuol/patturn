@@ -8,7 +8,7 @@ import withInternalReducer from './withInternalReducer';
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
 import * as transforms from './wallpaperGroupTransforms';
 
-import type {Path, Point, Provider, Component, Color} from './types';
+import type {Path, Point, Provider, Component, Color, Tool} from './types';
 
 const getCoordShiftAmount = (value, size) => -Math.floor(value / size) * size;
 
@@ -301,7 +301,7 @@ type State = {
   sizingStrokeWidth: boolean,
   smoothFactor: number,
   color: Color,
-  mode: 'pen' | 'line',
+  tool: 'pen' | 'line',
   inputDisabled: boolean,
 };
 
@@ -337,10 +337,12 @@ type Action =
   | {type: 'KEY_PRESSED', payload: MappedKey}
   | {type: 'KEY_RELEASED', payload: MappedKey}
   | {type: 'OVERLAY_PRESSED'}
+  | {type: 'TOOL_CONTROL_PRESSED'}
   | {type: 'COLOR_CONTROL_PRESSED'}
   | {type: 'STROKE_WIDTH_CONTROL_PRESSED'}
   | {type: 'COLOR_CHANGED', payload: Color}
-  | {type: 'STROKE_WIDTH_CHANGED', payload: number};
+  | {type: 'STROKE_WIDTH_CHANGED', payload: number}
+  | {type: 'TOOL_CHANGED', payload: Tool};
 
 import {BASECOLORS} from './Controls';
 const defaultState: State = {
@@ -354,7 +356,7 @@ const defaultState: State = {
   sizingStrokeWidth: false,
   smoothFactor: 0.5,
   color: BASECOLORS[0],
-  mode: 'line',
+  tool: 'line',
   inputDisabled: false,
 };
 
@@ -376,7 +378,7 @@ const getReducer = () =>
       if (!state.mousePressed) {
         updatedPaths = paths;
       } else {
-        if (state.mode === 'pen') {
+        if (state.tool === 'pen') {
           updatedPaths = [
             ...paths.slice(0, paths.length - 1),
             {
@@ -388,7 +390,7 @@ const getReducer = () =>
             },
           ];
         } else {
-          // state.mode === 'line'
+          // state.tool === 'line'
           updatedPaths = [
             ...paths.slice(0, paths.length - 1),
             {
@@ -462,11 +464,11 @@ const getReducer = () =>
       }
 
       if (action.payload === 'SET_PEN_MODE') {
-        return {...state, mode: 'pen'};
+        return {...state, tool: 'pen'};
       }
 
       if (action.payload === 'SET_LINE_MODE') {
-        return {...state, mode: 'line'};
+        return {...state, tool: 'line'};
       }
     }
 
@@ -477,6 +479,14 @@ const getReducer = () =>
           sizingStrokeWidth: false,
         };
       }
+    }
+
+    if (action.type === 'TOOL_CHANGED') {
+      return {
+        ...state,
+        tool: action.payload,
+        inputDisabled: false,
+      };
     }
 
     if (action.type === 'COLOR_CHANGED') {
@@ -497,6 +507,7 @@ const getReducer = () =>
 
     if (
       action.type === 'CONTROLS_PRESSED' ||
+      action.type === 'TOOL_CONTROL_PRESSED' ||
       action.type === 'COLOR_CONTROL_PRESSED' ||
       action.type === 'STROKE_WIDTH_CONTROL_PRESSED'
     ) {
@@ -581,6 +592,7 @@ type AppHandlers = {
   handleWheel: (e: SyntheticWheelEvent) => void,
   handleKeyDown: (e: SyntheticKeyboardEvent) => void,
   handleKeyUp: (e: SyntheticKeyboardEvent) => void,
+  handleToolChanged: (tool: Tool) => void,
   handleColorChanged: (color: Color) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
   handleControlsPressed: () => void,
@@ -669,13 +681,18 @@ const mapDispatchToProps = (dispatch): AppHandlers => {
       }
     },
 
+    handleToolChanged: tool => {
+      dispatch({
+        type: 'TOOL_CHANGED',
+        payload: tool,
+      });
+    },
     handleColorChanged: color => {
       dispatch({
         type: 'COLOR_CHANGED',
         payload: color,
       });
     },
-
     handleStrokeWidthChanged: strokeWidth => {
       dispatch({
         type: 'STROKE_WIDTH_CHANGED',
@@ -782,6 +799,7 @@ class PureApp extends React.Component {
         paths,
         zoom,
         transformType,
+        tool,
         strokeWidth,
         color,
         inputDisabled,
@@ -817,6 +835,7 @@ class PureApp extends React.Component {
         }}
       >
         <Controls
+          tool={tool}
           color={color}
           onPress={handleControlsPressed}
           strokeWidth={strokeWidth}

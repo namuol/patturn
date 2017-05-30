@@ -6,7 +6,7 @@ import materialPalette from 'material-palette';
 import {compose} from 'ramda';
 
 import {cadence} from './theme';
-import type {Component, Color} from './types';
+import type {Component, Color, Tool} from './types';
 import withInternalReducer from './withInternalReducer';
 
 const noop = () => {};
@@ -61,7 +61,6 @@ const styles = StyleSheet.create({
     borderRadius: '50%',
   },
   strokeWidthDropdown: {
-    // backgroundColor: 'rgba(255,255,255,0.9)',
     position: 'absolute',
     top: 0,
     left: cadence * 7 * 2,
@@ -73,9 +72,15 @@ const styles = StyleSheet.create({
     top: cadence * 7,
     left: 0,
     padding: cadence / 2,
-    // height: cadence * 7 * 4 + cadence,
     maxHeight: cadence * 8 * 4,
     flexWrap: 'wrap',
+  },
+  toolDropdown: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    padding: cadence / 2,
+    borderRadius: cadence / 2,
   },
 });
 
@@ -102,7 +107,34 @@ const Control = (props: ControlProps) => {
     </Touchable>
   );
 };
-
+const getToolDropdownHandler = onChange => // $FlowFixMe
+  !onChange ? noop : tool => () => onChange(tool);
+const TOOLS = {
+  pen: {
+    icon: '🖋',
+  },
+  line: {
+    icon: '📉',
+  },
+};
+type ToolDropdownProps = {
+  tool: Tool,
+  onChange?: (tool: number) => *,
+};
+const ToolDropdown = (props: ToolDropdownProps) => {
+  const {onChange} = props;
+  return (
+    <View style={styles.toolDropdown}>
+      {Object.keys(TOOLS).map(tool => (
+        <Control
+          selected={tool === props.tool}
+          onPress={getToolDropdownHandler(onChange)(tool)}
+          icon={TOOLS[tool].icon}
+        />
+      ))}
+    </View>
+  );
+};
 type StrokeWidthIconProps = {
   strokeWidth: number,
 };
@@ -120,11 +152,8 @@ const StrokeWidthIcon = (props: StrokeWidthIconProps) => {
     />
   );
 };
-
-const getStrokeWidthChangeHandler = onChange =>
-// $FlowFixMe
+const getStrokeWidthChangeHandler = onChange => // $FlowFixMe
   !onChange ? noop : strokeWidth => () => onChange(strokeWidth);
-
 const STROKE_WIDTHS = [1, 2, 4, 8, 14];
 type StrokeWidthDropdownProps = {
   strokeWidth: number,
@@ -144,7 +173,6 @@ const StrokeWidthDropdown = (props: StrokeWidthDropdownProps) => {
     </View>
   );
 };
-
 type ColorIconProps = {
   color: Color,
 };
@@ -158,41 +186,33 @@ const ColorIcon = (props: ColorIconProps) => (
     ]}
   />
 );
-
 export const BASECOLORS = [
   '#000000',
   '#ffffff',
   '#607D8d',
   '#795548',
-
   '#F44336',
   '#E91E63',
   '#9C27B0',
   '#673AB7',
-
   '#00BCD4',
   '#03A9F4',
   '#2196F3',
   '#3F51B5',
-
   '#CDDC39',
   '#8BC34A',
   '#4CAF50',
   '#009688',
-
   '#FFEB3B',
   '#FFC107',
   '#FF9800',
   '#FF5722',
 ];
-
 const SHADE_OVERRIDES = {
   '#ffffff': ['#ffffff', '#E0E0E0', '#9E9E9E', '#000000'],
   '#000000': ['#ffffff', '#E0E0E0', '#9E9E9E', '#000000'],
 };
-
 const SHADEKEYS = ['100', '300', '500', '900'];
-
 const SHADES = BASECOLORS.reduce(
   (shades, baseColor) => {
     // $FlowFixMe
@@ -207,7 +227,11 @@ const SHADES = BASECOLORS.reduce(
     if (!h) {
       h = 0;
     }
-    const palette = materialPalette({h, s: s * 100, l: l * 100});
+    const palette = materialPalette({
+      h,
+      s: s * 100,
+      l: l * 100,
+    });
     palette['500'] = baseColor;
     return {
       ...shades,
@@ -225,7 +249,6 @@ const SHADES = BASECOLORS.reduce(
             if (typeof v === 'string') {
               return results.concat(v);
             }
-
             const {h, s, l} = v;
             return results.concat(chroma.hsl(h, s / 100, l / 100).hex());
           },
@@ -235,7 +258,6 @@ const SHADES = BASECOLORS.reduce(
   },
   {},
 );
-
 const SHADESMAP = Object.keys(SHADES).reduce(
   (shadeMap, baseColor) => {
     return {
@@ -252,18 +274,14 @@ const SHADESMAP = Object.keys(SHADES).reduce(
   },
   {},
 );
-
 const getSelectedBaseColor = (color: Color) => {
   if (BASECOLORS.includes(color)) {
     return color;
   }
   return SHADESMAP[color];
 };
-
-const getColorChangedHandler = onChange =>
-// $FlowFixMe
+const getColorChangedHandler = onChange => // $FlowFixMe
   !onChange ? noop : color => () => onChange(color);
-
 type ColorDropdownProps = {
   color: Color,
   onChange?: (color: Color) => any,
@@ -286,7 +304,6 @@ const ColorDropdown = (props: ColorDropdownProps) => {
       />
     );
   });
-
   return (
     <View style={styles.colorDropdown}>
       {BASECOLORS.map((baseColor, idx) => (
@@ -317,63 +334,65 @@ const ColorDropdown = (props: ColorDropdownProps) => {
     </View>
   );
 };
-
 type RequiredProps = {
   color: Color,
   strokeWidth: number,
+  tool: Tool,
+  onToolChanged?: (tool: Tool) => *,
   onStrokeWidthChanged?: (strokeWidth: number) => *,
   onColorChanged?: (color: Color) => *,
   dispatch?: (*) => *,
 };
-
 type State = {
-  mode: 'default' | 'color' | 'strokeWidth',
+  mode: 'default' | 'tool' | 'color' | 'strokeWidth',
 };
-
 const defaultState: State = {
   mode: 'default',
 };
-
 const getReducer = () =>
   (state: State = defaultState, action): State => {
+    if (action.type === 'TOOL_CONTROL_PRESSED') {
+      return {
+        ...state,
+        mode: 'tool',
+      };
+    }
     if (action.type === 'COLOR_CONTROL_PRESSED') {
       return {
         ...state,
         mode: 'color',
       };
     }
-
     if (action.type === 'STROKE_WIDTH_CONTROL_PRESSED') {
       return {
         ...state,
         mode: 'strokeWidth',
       };
     }
-
     if (
       action.type === 'OVERLAY_PRESSED' ||
-      action.type === 'STROKE_WIDTH_CHANGED' ||
-      action.type === 'COLOR_CHANGED'
+      action.type === 'TOOL_CHANGED' ||
+      action.type === 'COLOR_CHANGED' ||
+      action.type === 'STROKE_WIDTH_CHANGED'
     ) {
       return {
         ...state,
         mode: 'default',
       };
     }
-
     return state;
   };
-
-const mapStateToProps = state => ({state});
-
+const mapStateToProps = state => ({
+  state,
+});
 type Handlers = {
   handleColorControlPressed: () => void,
   handleStrokeWidthControlPressed: () => void,
   handleOverlayPressed: () => void,
+  handleToolChanged: (tool: Tool) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
   handleColorChanged: (color: Color) => void,
 };
-
 const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => {
   if (ownProps.dispatch) {
     const externalDispatch = ownProps.dispatch;
@@ -383,47 +402,51 @@ const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => {
       externalDispatch(...args);
     };
   }
-
   return {
+    handleToolControlPressed: () => {
+      dispatch({
+        type: 'TOOL_CONTROL_PRESSED',
+      });
+    },
     handleColorControlPressed: () => {
       dispatch({
         type: 'COLOR_CONTROL_PRESSED',
       });
     },
-
     handleStrokeWidthControlPressed: () => {
       dispatch({
         type: 'STROKE_WIDTH_CONTROL_PRESSED',
       });
     },
-
     handleOverlayPressed: () => {
       dispatch({
         type: 'OVERLAY_PRESSED',
       });
     },
-
+    handleToolChanged: tool => {
+      dispatch({
+        type: 'TOOL_CHANGED',
+        payload: tool,
+      });
+      ownProps.onToolChanged && ownProps.onToolChanged(tool);
+    },
     handleStrokeWidthChanged: strokeWidth => {
       dispatch({
         type: 'STROKE_WIDTH_CHANGED',
         payload: strokeWidth,
       });
-
       ownProps.onStrokeWidthChanged &&
         ownProps.onStrokeWidthChanged(strokeWidth);
     },
-
     handleColorChanged: color => {
       dispatch({
         type: 'COLOR_CHANGED',
         payload: color,
       });
-
       ownProps.onColorChanged && ownProps.onColorChanged(color);
     },
   };
 };
-
 type Props = RequiredProps & Handlers & {
   state: State,
 };
@@ -431,19 +454,21 @@ const PureControls = (props: Props) => {
   const {
     color,
     strokeWidth,
+    tool,
+    handleToolControlPressed,
     handleColorControlPressed,
     handleStrokeWidthControlPressed,
     handleOverlayPressed,
+    handleToolChanged,
     handleStrokeWidthChanged,
     handleColorChanged,
     state: {
       mode,
     },
   } = props;
-
   return (
     <View style={styles.controls}>
-      <Control onPress={noop} icon="✏️" />
+      <Control onPress={handleToolControlPressed} icon={TOOLS[tool].icon} />
       <Control
         onPress={handleColorControlPressed}
         icon={<ColorIcon color={color} />}
@@ -459,6 +484,9 @@ const PureControls = (props: Props) => {
         <Touchable onPress={handleOverlayPressed}>
           <View style={styles.controlsOverlay} />
         </Touchable>}
+
+      {mode === 'tool' &&
+        <ToolDropdown onChange={handleToolChanged} tool={tool} />}
 
       {mode === 'strokeWidth' &&
         <StrokeWidthDropdown
