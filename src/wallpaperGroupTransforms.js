@@ -35,11 +35,29 @@ export const p1: TransformerFactory = () =>
 p1.getTileDimensions = getSquareTileDimensions;
 
 const makePathTransformer = transform =>
-  (paths: Array<Path>) =>
-    paths.map(({...rest, points}) => ({
-      ...rest,
-      points: points.map(transform),
+  (path: Path) => ({
+    ...path,
+    points: path.points.map(transform),
+  });
+
+const makeMatrixTransformer = matrices => {
+  const pathTransformers = matrices.map(matrix =>
+    makePathTransformer(({x, y}: Point) => {
+      const [x2, y2] = matrix.transformPoint(x, y);
+      return {x: x2, y: y2};
     }));
+  return (paths: Array<Path>) => {
+    return paths.reduce(
+      (allPaths, path) => {
+        return allPaths.concat(
+          path,
+          ...pathTransformers.map(transform => transform(path)),
+        );
+      },
+      [],
+    );
+  };
+};
 
 export const p2: TransformerFactory = (tileWidth, tileHeight) => {
   const matrix = new Matrix()
@@ -47,14 +65,7 @@ export const p2: TransformerFactory = (tileWidth, tileHeight) => {
     .rotate(Math.PI)
     .translate(-tileWidth / 2, -tileHeight / 2);
 
-  const transformPaths = makePathTransformer(({x, y}: Point) => {
-    const [x2, y2] = matrix.transformPoint(x, y);
-    return {x: x2, y: y2};
-  });
-
-  return (paths: Array<Path>) => {
-    return [...paths, ...transformPaths(paths)];
-  };
+  return makeMatrixTransformer([matrix]);
 };
 p2.getTileDimensions = getSquareTileDimensions;
 
@@ -85,21 +96,7 @@ export const p3: TransformerFactory = (tileWidth, tileHeight) => {
       .rotate(TAU / 3 * 2)
       .translate(-tileWidth / 2, -tileHeight / 2),
   ];
-  const pathTransformers = matrices.map(matrix =>
-    makePathTransformer(({x, y}: Point) => {
-      const [x2, y2] = matrix.transformPoint(x, y);
-      return {x: x2, y: y2};
-    }));
-  return (paths: Array<Path>) => {
-    return [
-      ...paths,
-      ...pathTransformers.reduce(
-        (addedPaths, transformPaths) => {
-          return [...addedPaths, ...transformPaths(paths)];
-        },
-        [],
-      ),
-    ];
-  };
+
+  return makeMatrixTransformer(matrices);
 };
 p3.getTileDimensions = getHexagonalTileDimensions;
