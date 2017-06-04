@@ -1,7 +1,9 @@
 [version]
-0.43.1
+0.47.0
 
 [ignore]
+.*/node_modules/animated/.*
+.*/node_modules/react-native-web/.*
 
 [include]
 

@@ -1,9 +1,9 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-  "flowide.enabled": true,
   "editor.formatOnSave": true,
   "prettier.bracketSpacing": false,
   "prettier.singleQuote": true,
   "prettier.trailingComma": "all",
-  "prettier.parser": "flow"
+  "prettier.parser": "flow",
+  "flow.useNPMPackagedFlow": true
 }

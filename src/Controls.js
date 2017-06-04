@@ -9,7 +9,7 @@ import {cadence} from './theme';
 import type {Component, Color, Tool} from './types';
 import withInternalReducer from './withInternalReducer';
 
-const noop = () => {};
+const noop: (*) => * = () => {};
 
 const styles = StyleSheet.create({
   control: {
@@ -92,7 +92,7 @@ const stop = fn =>
   };
 
 type ControlProps = {
-  onPress?: () => void,
+  onPress?: (*) => void,
   icon: any,
   selected?: boolean,
 };
@@ -119,7 +119,7 @@ const TOOLS = {
 };
 type ToolDropdownProps = {
   tool: Tool,
-  onChange?: (tool: number) => *,
+  onChange?: (tool: Tool) => *,
 };
 const ToolDropdown = (props: ToolDropdownProps) => {
   const {onChange} = props;
@@ -389,6 +389,7 @@ type Handlers = {
   handleColorControlPressed: () => void,
   handleStrokeWidthControlPressed: () => void,
   handleOverlayPressed: () => void,
+  handleToolControlPressed: (tool: Tool) => void,
   handleToolChanged: (tool: Tool) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
   handleColorChanged: (color: Color) => void,

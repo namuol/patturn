@@ -11,12 +11,14 @@
     "react": "^15.5.3",
     "react-dom": "^15.5.3",
     "react-primitives": "^0.4.2",
+    "react-redux": "^5.0.5",
+    "redux": "^3.6.0",
     "simplify-js": "^1.2.1",
     "transformatrix": "^1.1.1"
   },
   "devDependencies": {
     "@kadira/storybook": "^2.21.0",
-    "flow-bin": "^0.43.1",
+    "flow-bin": "^0.47.0",
     "husky": "^0.13.3",
     "lint-staged": "^3.4.0",
     "prettier": "^0.22.0",
