@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import {compose} from 'ramda';
-import withInternalReducer from './withInternalReducer';
+import {connect} from 'react-redux';
 
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
 import * as transforms from './wallpaperGroupTransforms';
@@ -362,170 +362,169 @@ const defaultState: State = {
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
-const getReducer = () =>
-  (state: State = defaultState, action: Action) => {
-    if (action.type === 'MOUSE_MOVED' && !state.inputDisabled) {
-      const {paths, zoom} = state;
-      const {
-        pageX,
-        pageY,
-      } = action.payload;
-      const mousePageX = pageX / zoom;
-      const mousePageY = pageY / zoom;
+export const reducer = (state: State = defaultState, action: Action) => {
+  if (action.type === 'MOUSE_MOVED' && !state.inputDisabled) {
+    const {paths, zoom} = state;
+    const {
+      pageX,
+      pageY,
+    } = action.payload;
+    const mousePageX = pageX / zoom;
+    const mousePageY = pageY / zoom;
 
-      let updatedPaths;
+    let updatedPaths;
 
-      if (!state.mousePressed) {
-        updatedPaths = paths;
-      } else {
-        if (state.tool === 'pen') {
-          updatedPaths = [
-            ...paths.slice(0, paths.length - 1),
-            {
-              ...paths[paths.length - 1],
-              points: [
-                ...paths[paths.length - 1].points,
-                {x: mousePageX, y: mousePageY},
-              ],
-            },
-          ];
-        } else {
-          // state.tool === 'line'
-          updatedPaths = [
-            ...paths.slice(0, paths.length - 1),
-            {
-              ...paths[paths.length - 1],
-              points: [
-                paths[paths.length - 1].points[0],
-                {x: mousePageX, y: mousePageY},
-              ],
-            },
-          ];
-        }
-      }
-
-      return {
-        ...state,
-        mousePageX,
-        mousePageY,
-        paths: updatedPaths,
-      };
-    }
-
-    if (action.type === 'MOUSE_PRESSED' && !state.inputDisabled) {
-      const {mousePageX, mousePageY, strokeWidth, smoothFactor, color} = state;
-      const {pageX, pageY} = action.payload || {};
-      return {
-        ...state,
-        mousePressed: true,
-        paths: [
-          ...state.paths,
+    if (!state.mousePressed) {
+      updatedPaths = paths;
+    } else {
+      if (state.tool === 'pen') {
+        updatedPaths = [
+          ...paths.slice(0, paths.length - 1),
           {
-            points: [{x: pageX || mousePageX, y: pageY || mousePageY}],
-            strokeWidth,
-            smoothFactor,
-            color,
+            ...paths[paths.length - 1],
+            points: [
+              ...paths[paths.length - 1].points,
+              {x: mousePageX, y: mousePageY},
+            ],
           },
-        ],
-      };
-    }
-
-    if (action.type === 'MOUSE_RELEASED') {
-      return {
-        ...state,
-        mousePressed: false,
-      };
-    }
-
-    if (action.type === 'ZOOMED') {
-      const {payload: {amount}} = action;
-
-      if (state.sizingStrokeWidth) {
-        const {strokeWidth} = state;
-        return {
-          ...state,
-          strokeWidth: clamp(strokeWidth - amount * 0.1, 0.5, 20),
-        };
-      }
-
-      const {zoom} = state;
-      return {
-        ...state,
-        zoom: clamp(zoom - amount * (zoom * 0.002), 0.5, 10),
-      };
-    }
-
-    if (action.type === 'KEY_PRESSED') {
-      if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
-        return {
-          ...state,
-          sizingStrokeWidth: true,
-        };
-      }
-
-      if (action.payload === 'SET_PEN_MODE') {
-        return {...state, tool: 'pen'};
-      }
-
-      if (action.payload === 'SET_LINE_MODE') {
-        return {...state, tool: 'line'};
+        ];
+      } else {
+        // state.tool === 'line'
+        updatedPaths = [
+          ...paths.slice(0, paths.length - 1),
+          {
+            ...paths[paths.length - 1],
+            points: [
+              paths[paths.length - 1].points[0],
+              {x: mousePageX, y: mousePageY},
+            ],
+          },
+        ];
       }
     }
 
-    if (action.type === 'KEY_RELEASED') {
-      if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
-        return {
-          ...state,
-          sizingStrokeWidth: false,
-        };
-      }
-    }
+    return {
+      ...state,
+      mousePageX,
+      mousePageY,
+      paths: updatedPaths,
+    };
+  }
 
-    if (action.type === 'TOOL_CHANGED') {
+  if (action.type === 'MOUSE_PRESSED' && !state.inputDisabled) {
+    const {mousePageX, mousePageY, strokeWidth, smoothFactor, color} = state;
+    const {pageX, pageY} = action.payload || {};
+    return {
+      ...state,
+      mousePressed: true,
+      paths: [
+        ...state.paths,
+        {
+          points: [{x: pageX || mousePageX, y: pageY || mousePageY}],
+          strokeWidth,
+          smoothFactor,
+          color,
+        },
+      ],
+    };
+  }
+
+  if (action.type === 'MOUSE_RELEASED') {
+    return {
+      ...state,
+      mousePressed: false,
+    };
+  }
+
+  if (action.type === 'ZOOMED') {
+    const {payload: {amount}} = action;
+
+    if (state.sizingStrokeWidth) {
+      const {strokeWidth} = state;
       return {
         ...state,
-        tool: action.payload,
-        inputDisabled: false,
+        strokeWidth: clamp(strokeWidth - amount * 0.1, 0.5, 20),
       };
     }
 
-    if (action.type === 'COLOR_CHANGED') {
+    const {zoom} = state;
+    return {
+      ...state,
+      zoom: clamp(zoom - amount * (zoom * 0.002), 0.5, 10),
+    };
+  }
+
+  if (action.type === 'KEY_PRESSED') {
+    if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
       return {
         ...state,
-        color: action.payload,
-        inputDisabled: false,
+        sizingStrokeWidth: true,
       };
     }
 
-    if (action.type === 'STROKE_WIDTH_CHANGED') {
-      return {
-        ...state,
-        strokeWidth: action.payload,
-        inputDisabled: false,
-      };
+    if (action.payload === 'SET_PEN_MODE') {
+      return {...state, tool: 'pen'};
     }
 
-    if (
-      action.type === 'CONTROLS_PRESSED' ||
-      action.type === 'TOOL_CONTROL_PRESSED' ||
-      action.type === 'COLOR_CONTROL_PRESSED' ||
-      action.type === 'STROKE_WIDTH_CONTROL_PRESSED'
-    ) {
+    if (action.payload === 'SET_LINE_MODE') {
+      return {...state, tool: 'line'};
+    }
+  }
+
+  if (action.type === 'KEY_RELEASED') {
+    if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
       return {
         ...state,
-        inputDisabled: true,
+        sizingStrokeWidth: false,
       };
     }
+  }
 
-    if (action.type === 'OVERLAY_PRESSED') {
-      return {
-        ...state,
-        inputDisabled: false,
-      };
-    }
+  if (action.type === 'TOOL_CHANGED') {
+    return {
+      ...state,
+      tool: action.payload,
+      inputDisabled: false,
+    };
+  }
 
-    return state;
-  };
+  if (action.type === 'COLOR_CHANGED') {
+    return {
+      ...state,
+      color: action.payload,
+      inputDisabled: false,
+    };
+  }
+
+  if (action.type === 'STROKE_WIDTH_CHANGED') {
+    return {
+      ...state,
+      strokeWidth: action.payload,
+      inputDisabled: false,
+    };
+  }
+
+  if (
+    action.type === 'CONTROLS_PRESSED' ||
+    action.type === 'TOOL_CONTROL_PRESSED' ||
+    action.type === 'COLOR_CONTROL_PRESSED' ||
+    action.type === 'STROKE_WIDTH_CONTROL_PRESSED'
+  ) {
+    return {
+      ...state,
+      inputDisabled: true,
+    };
+  }
+
+  if (action.type === 'OVERLAY_PRESSED') {
+    return {
+      ...state,
+      inputDisabled: false,
+    };
+  }
+
+  return state;
+};
 
 const smoothPath = (path: Path) => {
   const {points, smoothFactor} = path;
@@ -565,13 +564,19 @@ const mapStateToProps = (state: State): {state: State} => {
 
   const smoothedPaths = paths.map(smoothPath);
 
-  const simplifyPath = ({points, ...rest}) =>
-    points.length < 2
-      ? {...rest, points} // simplify() chokes if we don't do this
-      : {
-          ...rest,
-          points: simplify(points, 0.5 / zoom, false),
-        };
+  const simplifyPath = ({points, ...rest}) => {
+    if (points.length < 2) {
+      // simplify() chokes if we don't do this:
+      return {...rest, points};
+    }
+
+    const simplifiedPoints: Array<Point> = simplify(points, 0.5 / zoom, false);
+
+    return {
+      ...rest,
+      points: simplifiedPoints,
+    };
+  };
 
   return {
     state: {
@@ -598,7 +603,7 @@ type AppHandlers = {
   handleControlsPressed: () => void,
 };
 
-const mapDispatchToProps = (dispatch): AppHandlers => {
+const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
   return {
     dispatch,
     handleTouchMove: (event: SyntheticTouchEvent) => {
@@ -861,8 +866,8 @@ class PureApp extends React.Component {
 }
 
 const App: Component<AppRequiredProps> = compose(
-  withInternalReducer(getReducer, mapStateToProps, mapDispatchToProps),
   withViewBoxDimensions,
+  connect(mapStateToProps, mapDispatchToProps),
 )(PureApp);
 
 export default App;

@@ -1,6 +1,13 @@
 // @flow
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from './App';
+import {createStore} from 'redux';
+import {Provider} from 'react-redux';
+import App, {reducer as appReducer} from './App';
 
-ReactDOM.render(<App tileSize={100} />, document.getElementById('root'));
+const store = createStore(appReducer);
+
+ReactDOM.render(
+  <Provider store={store}><App tileSize={100} /></Provider>,
+  document.getElementById('root'),
+);
