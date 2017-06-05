@@ -290,12 +290,18 @@ const Canvas = (
   );
 };
 
+type PathList = Array<Path>;
+
 type State = {
   mousePageX: number,
   mousePageY: number,
   strokeWidth: number,
   mousePressed: boolean,
-  paths: Array<Path>,
+  paths: PathList,
+  history: {
+    past: Array<PathList>,
+    future: Array<PathList>,
+  },
   zoom: number,
   transformType: $Keys<typeof transforms>,
   sizingStrokeWidth: boolean,
@@ -342,7 +348,9 @@ type Action =
   | {type: 'STROKE_WIDTH_CONTROL_PRESSED'}
   | {type: 'COLOR_CHANGED', payload: Color}
   | {type: 'STROKE_WIDTH_CHANGED', payload: number}
-  | {type: 'TOOL_CHANGED', payload: Tool};
+  | {type: 'TOOL_CHANGED', payload: Tool}
+  | {type: 'UNDO'}
+  | {type: 'REDO'};
 
 import {BASECOLORS} from './Controls';
 const defaultState: State = {
@@ -352,6 +360,10 @@ const defaultState: State = {
   zoom: 1,
   mousePressed: false,
   paths: [],
+  history: {
+    past: [],
+    future: [],
+  },
   transformType: 'p3',
   sizingStrokeWidth: false,
   smoothFactor: 0.5,
@@ -412,11 +424,23 @@ export const reducer = (state: State = defaultState, action: Action) => {
   }
 
   if (action.type === 'MOUSE_PRESSED' && !state.inputDisabled) {
-    const {mousePageX, mousePageY, strokeWidth, smoothFactor, color} = state;
+    const {
+      mousePageX,
+      mousePageY,
+      strokeWidth,
+      smoothFactor,
+      color,
+      history,
+    } = state;
+
     const {pageX, pageY} = action.payload || {};
     return {
       ...state,
       mousePressed: true,
+      history: {
+        ...history,
+        past: [...history.past, state.paths],
+      },
       paths: [
         ...state.paths,
         {
@@ -523,6 +547,42 @@ export const reducer = (state: State = defaultState, action: Action) => {
     };
   }
 
+  if (action.type === 'UNDO') {
+    const {
+      history: {
+        past,
+        future,
+      },
+    } = state;
+
+    return {
+      ...state,
+      history: {
+        past: past.slice(0, past.length - 1),
+        future: [state.paths, ...future],
+      },
+      paths: past[past.length - 1],
+    };
+  }
+
+  if (action.type === 'REDO') {
+    const {
+      history: {
+        past,
+        future,
+      },
+    } = state;
+
+    return {
+      ...state,
+      history: {
+        past: [...past, state.paths],
+        future: future.slice(1),
+      },
+      paths: future[0],
+    };
+  }
+
   return state;
 };
 
@@ -604,6 +664,7 @@ type AppHandlers = {
 };
 
 const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
+  window.dispatch = dispatch;
   return {
     dispatch,
     handleTouchMove: (event: SyntheticTouchEvent) => {
