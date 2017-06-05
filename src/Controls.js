@@ -130,6 +130,7 @@ const ToolDropdown = (props: ToolDropdownProps) => {
     <View style={styles.toolDropdown}>
       {Object.keys(TOOLS).map(tool => (
         <Control
+          key={tool}
           selected={tool === props.tool}
           onPress={getToolDropdownHandler(onChange)(tool)}
           icon={TOOLS[tool].icon}
@@ -168,6 +169,7 @@ const StrokeWidthDropdown = (props: StrokeWidthDropdownProps) => {
     <View style={styles.strokeWidthDropdown}>
       {STROKE_WIDTHS.map(strokeWidth => (
         <Control
+          key={'strokeWidth:' + strokeWidth}
           selected={strokeWidth === props.strokeWidth}
           onPress={getStrokeWidthChangeHandler(onChange)(strokeWidth)}
           icon={<StrokeWidthIcon strokeWidth={strokeWidth} />}
