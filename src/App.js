@@ -308,7 +308,6 @@ type State = {
   smoothFactor: number,
   color: Color,
   tool: 'pen' | 'line',
-  inputDisabled: boolean,
 };
 
 const keyMap: {
@@ -317,6 +316,8 @@ const keyMap: {
   alt: 'TOGGLE_SIZING_STROKEWIDTH',
   l: 'SET_LINE_MODE',
   p: 'SET_PEN_MODE',
+  z: 'UNDO',
+  y: 'REDO',
 };
 
 type MappedKey = $Keys<typeof keyMap>;
@@ -369,13 +370,60 @@ const defaultState: State = {
   smoothFactor: 0.5,
   color: BASECOLORS[0],
   tool: 'line',
-  inputDisabled: false,
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
+const undo = (state: State) => {
+  const {
+    history: {
+      past,
+      future,
+    },
+  } = state;
+
+  if (past.length === 0) {
+    return {
+      ...state,
+    };
+  }
+
+  return {
+    ...state,
+    history: {
+      past: past.slice(0, past.length - 1),
+      future: [state.paths, ...future],
+    },
+    paths: past[past.length - 1],
+  };
+};
+
+const redo = (state: State) => {
+  const {
+    history: {
+      past,
+      future,
+    },
+  } = state;
+
+  if (future.length === 0) {
+    return {
+      ...state,
+    };
+  }
+
+  return {
+    ...state,
+    history: {
+      past: [...past, state.paths],
+      future: future.slice(1),
+    },
+    paths: future[0],
+  };
+};
+
 export const reducer = (state: State = defaultState, action: Action) => {
-  if (action.type === 'MOUSE_MOVED' && !state.inputDisabled) {
+  if (action.type === 'MOUSE_MOVED') {
     const {paths, zoom} = state;
     const {
       pageX,
@@ -423,7 +471,7 @@ export const reducer = (state: State = defaultState, action: Action) => {
     };
   }
 
-  if (action.type === 'MOUSE_PRESSED' && !state.inputDisabled) {
+  if (action.type === 'MOUSE_PRESSED') {
     const {
       mousePageX,
       mousePageY,
@@ -493,6 +541,14 @@ export const reducer = (state: State = defaultState, action: Action) => {
     if (action.payload === 'SET_LINE_MODE') {
       return {...state, tool: 'line'};
     }
+
+    if (action.payload === 'UNDO') {
+      return undo(state);
+    }
+
+    if (action.payload === 'REDO') {
+      return redo(state);
+    }
   }
 
   if (action.type === 'KEY_RELEASED') {
@@ -508,7 +564,6 @@ export const reducer = (state: State = defaultState, action: Action) => {
     return {
       ...state,
       tool: action.payload,
-      inputDisabled: false,
     };
   }
 
@@ -516,7 +571,6 @@ export const reducer = (state: State = defaultState, action: Action) => {
     return {
       ...state,
       color: action.payload,
-      inputDisabled: false,
     };
   }
 
@@ -524,63 +578,15 @@ export const reducer = (state: State = defaultState, action: Action) => {
     return {
       ...state,
       strokeWidth: action.payload,
-      inputDisabled: false,
     };
   }
 
-  if (
-    action.type === 'CONTROLS_PRESSED' ||
-    action.type === 'TOOL_CONTROL_PRESSED' ||
-    action.type === 'COLOR_CONTROL_PRESSED' ||
-    action.type === 'STROKE_WIDTH_CONTROL_PRESSED'
-  ) {
-    return {
-      ...state,
-      inputDisabled: true,
-    };
+  if (action.type === 'UNDO_CONTROL_PRESSED') {
+    return undo(state);
   }
 
-  if (action.type === 'OVERLAY_PRESSED') {
-    return {
-      ...state,
-      inputDisabled: false,
-    };
-  }
-
-  if (action.type === 'UNDO') {
-    const {
-      history: {
-        past,
-        future,
-      },
-    } = state;
-
-    return {
-      ...state,
-      history: {
-        past: past.slice(0, past.length - 1),
-        future: [state.paths, ...future],
-      },
-      paths: past[past.length - 1],
-    };
-  }
-
-  if (action.type === 'REDO') {
-    const {
-      history: {
-        past,
-        future,
-      },
-    } = state;
-
-    return {
-      ...state,
-      history: {
-        past: [...past, state.paths],
-        future: future.slice(1),
-      },
-      paths: future[0],
-    };
+  if (action.type === 'REDO_CONTROL_PRESSED') {
+    return redo(state);
   }
 
   return state;
@@ -619,7 +625,13 @@ const smoothPath = (path: Path) => {
 
 import simplify from 'simplify-js';
 
-const mapStateToProps = (state: State): {state: State} => {
+type AppStateMappedProps = {
+  state: State,
+  canUndo: boolean,
+  canRedo: boolean,
+};
+
+const mapStateToProps = (state: State): AppStateMappedProps => {
   const {paths, zoom} = state;
 
   const smoothedPaths = paths.map(smoothPath);
@@ -638,11 +650,16 @@ const mapStateToProps = (state: State): {state: State} => {
     };
   };
 
+  const canUndo = state.history.past.length > 0;
+  const canRedo = state.history.future.length > 0;
+
   return {
     state: {
       ...state,
       paths: smoothedPaths.map(simplifyPath),
     },
+    canUndo,
+    canRedo,
   };
 };
 
@@ -660,7 +677,6 @@ type AppHandlers = {
   handleToolChanged: (tool: Tool) => void,
   handleColorChanged: (color: Color) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
-  handleControlsPressed: () => void,
 };
 
 const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
@@ -765,10 +781,6 @@ const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
         payload: strokeWidth,
       });
     },
-
-    handleControlsPressed: () => {
-      dispatch({type: 'CONTROLS_PRESSED'});
-    },
   };
 };
 
@@ -834,9 +846,7 @@ type AppRequiredProps = {
   tileSize: number,
 };
 
-type Props = AppRequiredProps & AppHandlers & ViewBoxProps & {
-  state: State,
-};
+type Props = AppRequiredProps & AppHandlers & ViewBoxProps & AppStateMappedProps;
 
 import Controls from './Controls';
 
@@ -855,7 +865,6 @@ class PureApp extends React.Component {
       handleKeyUp,
       handleColorChanged,
       handleStrokeWidthChanged,
-      handleControlsPressed,
       tileSize,
       dispatch,
       state: {
@@ -868,8 +877,9 @@ class PureApp extends React.Component {
         tool,
         strokeWidth,
         color,
-        inputDisabled,
       },
+      canUndo,
+      canRedo,
       viewBoxWidth,
       viewBoxHeight,
     } = this.props;
@@ -884,43 +894,53 @@ class PureApp extends React.Component {
 
     return (
       <div
-        onTouchStart={!inputDisabled && handleTouchStart}
-        onTouchMove={!inputDisabled && handleTouchMove}
-        onTouchEnd={!inputDisabled && handleTouchEnd}
-        onMouseDown={!inputDisabled && handleMouseDown}
-        onMouseMove={!inputDisabled && handleMouseMove}
-        onMouseUp={!inputDisabled && handleMouseUp}
-        onWheel={!inputDisabled && handleWheel}
-        onKeyDown={!inputDisabled && handleKeyDown}
-        onKeyUp={!inputDisabled && handleKeyUp}
-        tabIndex={1}
         style={{
           height: '100%',
           width: '100%',
           overflow: 'hidden',
         }}
       >
-        <Controls
-          tool={tool}
-          color={color}
-          onPress={handleControlsPressed}
-          strokeWidth={strokeWidth}
-          dispatch={dispatch}
-          onColorChanged={handleColorChanged}
-          onStrokeWidthChanged={handleStrokeWidthChanged}
-        />
-        <Canvas
-          mousePageX={mousePageX}
-          mousePageY={mousePageY}
-          mousePressed={mousePressed}
-          zoom={zoom}
-          viewBoxWidth={viewBoxWidth}
-          viewBoxHeight={viewBoxHeight}
-          tileWidth={tileWidth}
-          tileHeight={tileHeight}
-          paths={transform(paths)}
-          strokeWidth={strokeWidth}
-        />
+        {!mousePressed &&
+          <Controls
+            tool={tool}
+            color={color}
+            strokeWidth={strokeWidth}
+            dispatch={dispatch}
+            onColorChanged={handleColorChanged}
+            onStrokeWidthChanged={handleStrokeWidthChanged}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />}
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onWheel={handleWheel}
+          onKeyDown={handleKeyDown}
+          onKeyUp={handleKeyUp}
+          tabIndex={1}
+          style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+          }}
+        >
+          <Canvas
+            mousePageX={mousePageX}
+            mousePageY={mousePageY}
+            mousePressed={mousePressed}
+            zoom={zoom}
+            viewBoxWidth={viewBoxWidth}
+            viewBoxHeight={viewBoxHeight}
+            tileWidth={tileWidth}
+            tileHeight={tileHeight}
+            paths={transform(paths)}
+            strokeWidth={strokeWidth}
+          />
+        </div>
       </div>
     );
   }

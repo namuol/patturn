@@ -34,9 +34,6 @@ const withInternalReducer = <S, SMP: Object, DMP: Object>(
       });
 
       dispatch = (action: Action) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(action.type, action.payload);
-        }
         this.setState((state: S, props: RP) => {
           return getReducer(props)(state, action);
         });

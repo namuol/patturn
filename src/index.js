@@ -5,7 +5,13 @@ import {createStore} from 'redux';
 import {Provider} from 'react-redux';
 import App, {reducer as appReducer} from './App';
 
-const store = createStore(appReducer);
+const store = createStore(
+  appReducer,
+  window.__REDUX_DEVTOOLS_EXTENSION__ &&
+    window.__REDUX_DEVTOOLS_EXTENSION__({
+      actionsBlacklist: ['MOUSE_MOVED'],
+    }),
+);
 
 ReactDOM.render(
   <Provider store={store}><App tileSize={100} /></Provider>,

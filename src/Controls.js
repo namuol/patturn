@@ -38,6 +38,8 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     flexDirection: 'row',
+  },
+  controlsFullScreen: {
     width: '100%',
     height: '100%',
   },
@@ -95,10 +97,11 @@ type ControlProps = {
   onPress?: (*) => void,
   icon: any,
   selected?: boolean,
+  disabled?: boolean,
 };
 const Control = (props: ControlProps) => {
   return (
-    <Touchable onPressIn={stop(props.onPress)}>
+    <Touchable onPressIn={props.disabled ? noop : stop(props.onPress)}>
       <View style={[styles.control, props.selected && styles.selected]}>
         <View style={props.disabled && styles.disabled}>
           {props.icon}
@@ -342,6 +345,8 @@ type RequiredProps = {
   onStrokeWidthChanged?: (strokeWidth: number) => *,
   onColorChanged?: (color: Color) => *,
   dispatch?: (*) => *,
+  canUndo: boolean,
+  canRedo: boolean,
 };
 type State = {
   mode: 'default' | 'tool' | 'color' | 'strokeWidth',
@@ -393,6 +398,8 @@ type Handlers = {
   handleToolChanged: (tool: Tool) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
   handleColorChanged: (color: Color) => void,
+  handleUndoControlPressed: () => void,
+  handleRedoControlPressed: () => void,
 };
 const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => {
   if (ownProps.dispatch) {
@@ -446,6 +453,16 @@ const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => {
       });
       ownProps.onColorChanged && ownProps.onColorChanged(color);
     },
+    handleUndoControlPressed: () => {
+      dispatch({
+        type: 'UNDO_CONTROL_PRESSED',
+      });
+    },
+    handleRedoControlPressed: () => {
+      dispatch({
+        type: 'REDO_CONTROL_PRESSED',
+      });
+    },
   };
 };
 type Props = RequiredProps & Handlers & {
@@ -463,12 +480,19 @@ const PureControls = (props: Props) => {
     handleToolChanged,
     handleStrokeWidthChanged,
     handleColorChanged,
+    handleUndoControlPressed,
+    handleRedoControlPressed,
     state: {
       mode,
     },
+    canUndo,
+    canRedo,
   } = props;
+  const overlayVisible = mode !== 'default';
   return (
-    <View style={styles.controls}>
+    <View
+      style={[styles.controls, overlayVisible && styles.controlsFullScreen]}
+    >
       <Control onPress={handleToolControlPressed} icon={TOOLS[tool].icon} />
       <Control
         onPress={handleColorControlPressed}
@@ -478,8 +502,16 @@ const PureControls = (props: Props) => {
         onPress={handleStrokeWidthControlPressed}
         icon={<StrokeWidthIcon strokeWidth={strokeWidth} />}
       />
-      <Control onPress={noop} icon="↩️" />
-      <Control onPress={noop} icon="↪️" />
+      <Control
+        onPress={handleUndoControlPressed}
+        icon="↩️"
+        disabled={!canUndo}
+      />
+      <Control
+        onPress={handleRedoControlPressed}
+        icon="↪️"
+        disabled={!canRedo}
+      />
 
       {mode !== 'default' &&
         <Touchable onPress={handleOverlayPressed}>
