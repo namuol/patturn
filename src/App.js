@@ -52,35 +52,6 @@ const getTileSegmentFromPageSegment = (
   return points.map(addToCoords({x: xDiff, y: yDiff}));
 };
 
-const TileableCircle = (
-  {
-    cx,
-    cy,
-    fill,
-    r,
-    tileHeight,
-    tileWidth,
-  },
-) => {
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={r} fill={fill} />
-
-      <circle cx={cx + tileWidth} cy={cy} r={r} fill={fill} />
-      <circle cx={cx - tileWidth} cy={cy} r={r} fill={fill} />
-
-      <circle cx={cx} cy={cy + tileHeight} r={r} fill={fill} />
-      <circle cx={cx} cy={cy - tileHeight} r={r} fill={fill} />
-
-      <circle cx={cx + tileWidth} cy={cy + tileHeight} r={r} fill={fill} />
-      <circle cx={cx + tileWidth} cy={cy - tileHeight} r={r} fill={fill} />
-
-      <circle cx={cx - tileWidth} cy={cy + tileHeight} r={r} fill={fill} />
-      <circle cx={cx - tileWidth} cy={cy - tileHeight} r={r} fill={fill} />
-    </g>
-  );
-};
-
 const round = (number, precision) => {
   const factor = Math.pow(10, precision);
   return Math.round(number * factor) / factor;
@@ -149,13 +120,6 @@ const Tile = pure(({
   zoom,
   strokeWidth,
 }: TileProps) => {
-  const {x: tileMouseX, y: tileMouseY} = getTileCoordFromPageCoord({
-    x: mousePageX,
-    y: mousePageY,
-    tileHeight,
-    tileWidth,
-  });
-
   const tilePaths = paths
     .reduce(
       (allPaths, path) => {

@@ -89,13 +89,6 @@ const styles = StyleSheet.create({
   },
 });
 
-const stop = fn =>
-  e => {
-    e && e.preventDefault && e.preventDefault();
-    e && e.stopPropagation && e.stopPropagation();
-    fn && fn(e);
-  };
-
 const setPressed = state => {
   return {...state, pressed: true};
 };
