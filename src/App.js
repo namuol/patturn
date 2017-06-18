@@ -4,6 +4,9 @@ import ReactDOM from 'react-dom';
 
 import {compose} from 'ramda';
 import {connect} from 'react-redux';
+import {pure} from 'recompose';
+
+import Pinchable from 'react-tappable/lib/Pinchable';
 
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
 import * as transforms from './wallpaperGroupTransforms';
@@ -87,18 +90,16 @@ const getPolylinePointsString = (points: Array<Point>) => {
   return points.map(({x, y}) => [round(x, 2), round(y, 2)].join(',')).join(' ');
 };
 
-const TilablePolyline = (
-  {
-    points,
-    tileWidth,
-    tileHeight,
-    ...props
-  }: {
-    points: Array<Point>,
-    tileWidth: number,
-    tileHeight: number,
-  },
-) => {
+const TilablePolyline = pure(({
+  points,
+  tileWidth,
+  tileHeight,
+  ...props
+}: {
+  points: Array<Point>,
+  tileWidth: number,
+  tileHeight: number,
+}) => {
   return (
     <g>
       {[
@@ -124,7 +125,7 @@ const TilablePolyline = (
       })}
     </g>
   );
-};
+});
 
 type TileProps = {
   id: string,
@@ -137,19 +138,17 @@ type TileProps = {
   zoom: number,
   strokeWidth: number,
 };
-const Tile = (
-  {
-    id,
-    mousePageX,
-    mousePageY,
-    mousePressed,
-    paths,
-    tileHeight,
-    tileWidth,
-    zoom,
-    strokeWidth,
-  }: TileProps,
-) => {
+const Tile = pure(({
+  id,
+  mousePageX,
+  mousePageY,
+  mousePressed,
+  paths,
+  tileHeight,
+  tileWidth,
+  zoom,
+  strokeWidth,
+}: TileProps) => {
   const {x: tileMouseX, y: tileMouseY} = getTileCoordFromPageCoord({
     x: mousePageX,
     y: mousePageY,
@@ -239,7 +238,7 @@ const Tile = (
       />
     </pattern>
   );
-};
+});
 
 type CanvasProps = {
   tileWidth: number,
@@ -254,20 +253,18 @@ type CanvasProps = {
   strokeWidth: number,
 };
 
-const Canvas = (
-  {
-    mousePageX,
-    mousePageY,
-    mousePressed,
-    viewBoxHeight,
-    viewBoxWidth,
-    tileWidth,
-    tileHeight,
-    paths,
-    zoom,
-    strokeWidth,
-  }: CanvasProps,
-) => {
+const Canvas = pure(({
+  mousePageX,
+  mousePageY,
+  mousePressed,
+  viewBoxHeight,
+  viewBoxWidth,
+  tileWidth,
+  tileHeight,
+  paths,
+  zoom,
+  strokeWidth,
+}: CanvasProps) => {
   return (
     <svg viewBox={`0 0 ${viewBoxWidth / zoom} ${viewBoxHeight / zoom}`}>
       <Tile
@@ -288,7 +285,7 @@ const Canvas = (
       />
     </svg>
   );
-};
+});
 
 type PathList = Array<Path>;
 
@@ -303,6 +300,8 @@ type State = {
     future: Array<PathList>,
   },
   zoom: number,
+  zoomWhenPinchStarted: number,
+  pinching: boolean,
   transformType: $Keys<typeof transforms>,
   sizingStrokeWidth: boolean,
   smoothFactor: number,
@@ -358,8 +357,10 @@ const defaultState: State = {
   mousePageX: 0,
   mousePageY: 0,
   strokeWidth: 2,
+  zoomWhenPinchStarted: 1,
   zoom: 1,
   mousePressed: false,
+  pinching: false,
   paths: [],
   history: {
     past: [],
@@ -472,9 +473,14 @@ export const reducer = (state: State = defaultState, action: Action) => {
   }
 
   if (action.type === 'MOUSE_PRESSED') {
+    if (state.mousePressed) {
+      return state;
+    }
+
     const {
       mousePageX,
       mousePageY,
+      zoom,
       strokeWidth,
       smoothFactor,
       color,
@@ -492,7 +498,9 @@ export const reducer = (state: State = defaultState, action: Action) => {
       paths: [
         ...state.paths,
         {
-          points: [{x: pageX || mousePageX, y: pageY || mousePageY}],
+          points: [
+            {x: pageX / zoom || mousePageX, y: pageY / zoom || mousePageY},
+          ],
           strokeWidth,
           smoothFactor,
           color,
@@ -502,9 +510,17 @@ export const reducer = (state: State = defaultState, action: Action) => {
   }
 
   if (action.type === 'MOUSE_RELEASED') {
+    if (!state.mousePressed) {
+      return state;
+    }
+
     return {
       ...state,
       mousePressed: false,
+      history: {
+        ...state.history,
+        future: [],
+      },
     };
   }
 
@@ -523,6 +539,44 @@ export const reducer = (state: State = defaultState, action: Action) => {
     return {
       ...state,
       zoom: clamp(zoom - amount * (zoom * 0.002), 0.5, 10),
+    };
+  }
+
+  if (action.type === 'PINCH_STARTED') {
+    const {
+      paths,
+      history,
+      history: {
+        past,
+      },
+    } = state;
+
+    return {
+      ...state,
+      mousePressed: false,
+      pinching: true,
+      zoomWhenPinchStarted: state.zoom,
+      paths: paths.slice(0, paths.length - 1),
+      history: {
+        ...history,
+        past: past.slice(0, past.length - 1),
+      },
+    };
+  }
+
+  if (action.type === 'PINCH_MOVED') {
+    const {payload: {zoomMultiple}} = action;
+
+    return {
+      ...state,
+      zoom: clamp(state.zoomWhenPinchStarted * zoomMultiple, 0.5, 10),
+    };
+  }
+
+  if (action.type === 'PINCH_ENDED') {
+    return {
+      ...state,
+      pinching: false,
     };
   }
 
@@ -624,6 +678,7 @@ const smoothPath = (path: Path) => {
 };
 
 import simplify from 'simplify-js';
+import {createSelector} from 'reselect';
 
 type AppStateMappedProps = {
   state: State,
@@ -631,32 +686,44 @@ type AppStateMappedProps = {
   canRedo: boolean,
 };
 
-const mapStateToProps = (state: State): AppStateMappedProps => {
-  const {paths, zoom} = state;
+const getLODSnappedZoom = ({zoom}: State) => 1;
 
-  const smoothedPaths = paths.map(smoothPath);
+const getSmoothedPaths = ({paths}: State) => paths.map(smoothPath);
 
-  const simplifyPath = ({points, ...rest}) => {
-    if (points.length < 2) {
-      // simplify() chokes if we don't do this:
-      return {...rest, points};
-    }
+const getSimplifiedPaths = createSelector(
+  getSmoothedPaths,
+  getLODSnappedZoom,
+  (smoothedPaths, zoom) => {
+    const simplifyPath = ({points, ...rest}) => {
+      if (points.length < 2) {
+        // simplify() chokes if we don't do this:
+        return {...rest, points};
+      }
 
-    const simplifiedPoints: Array<Point> = simplify(points, 0.5 / zoom, false);
+      const simplifiedPoints: Array<Point> = simplify(
+        points,
+        0.5 / zoom,
+        false,
+      );
 
-    return {
-      ...rest,
-      points: simplifiedPoints,
+      return {
+        ...rest,
+        points: simplifiedPoints,
+      };
     };
-  };
 
+    return smoothedPaths.map(simplifyPath);
+  },
+);
+
+const mapStateToProps = (state: State): AppStateMappedProps => {
   const canUndo = state.history.past.length > 0;
   const canRedo = state.history.future.length > 0;
 
   return {
     state: {
       ...state,
-      paths: smoothedPaths.map(simplifyPath),
+      paths: getSimplifiedPaths(state),
     },
     canUndo,
     canRedo,
@@ -677,6 +744,9 @@ type AppHandlers = {
   handleToolChanged: (tool: Tool) => void,
   handleColorChanged: (color: Color) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
+  handlePinchStart: (e: Object) => void,
+  handlePinchMove: (e: Object) => void,
+  handlePinchEnd: (e: Object) => void,
 };
 
 const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
@@ -781,6 +851,22 @@ const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
         payload: strokeWidth,
       });
     },
+    handlePinchStart: () => {
+      dispatch({
+        type: 'PINCH_STARTED',
+      });
+    },
+    handlePinchMove: ({zoom}) => {
+      dispatch({
+        type: 'PINCH_MOVED',
+        payload: {zoomMultiple: zoom},
+      });
+    },
+    handlePinchEnd: () => {
+      dispatch({
+        type: 'PINCH_ENDED',
+      });
+    },
   };
 };
 
@@ -865,12 +951,16 @@ class PureApp extends React.Component {
       handleKeyUp,
       handleColorChanged,
       handleStrokeWidthChanged,
+      handlePinchStart,
+      handlePinchMove,
+      handlePinchEnd,
       tileSize,
       dispatch,
       state: {
         mousePageX,
         mousePageY,
         mousePressed,
+        pinching,
         paths,
         zoom,
         transformType,
@@ -901,6 +991,7 @@ class PureApp extends React.Component {
         }}
       >
         {!mousePressed &&
+          !pinching &&
           <Controls
             tool={tool}
             color={color}
@@ -911,36 +1002,51 @@ class PureApp extends React.Component {
             canUndo={canUndo}
             canRedo={canRedo}
           />}
-        <div
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onWheel={handleWheel}
-          onKeyDown={handleKeyDown}
-          onKeyUp={handleKeyUp}
-          tabIndex={1}
-          style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-          }}
+        <Pinchable
+          onKeyDown={false}
+          onKeyUp={false}
+          onTouchStart={false}
+          onTouchMove={false}
+          onTouchEnd={false}
+          onMouseDown={false}
+          onMouseUp={false}
+          onMouseMove={false}
+          onMouseOut={false}
+          onPinchStart={handlePinchStart}
+          onPinchMove={handlePinchMove}
+          onPinchEnd={handlePinchEnd}
         >
-          <Canvas
-            mousePageX={mousePageX}
-            mousePageY={mousePageY}
-            mousePressed={mousePressed}
-            zoom={zoom}
-            viewBoxWidth={viewBoxWidth}
-            viewBoxHeight={viewBoxHeight}
-            tileWidth={tileWidth}
-            tileHeight={tileHeight}
-            paths={transform(paths)}
-            strokeWidth={strokeWidth}
-          />
-        </div>
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onWheel={handleWheel}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleKeyUp}
+            tabIndex={1}
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+            }}
+          >
+            <Canvas
+              mousePageX={mousePageX}
+              mousePageY={mousePageY}
+              mousePressed={mousePressed}
+              zoom={zoom}
+              viewBoxWidth={viewBoxWidth}
+              viewBoxHeight={viewBoxHeight}
+              tileWidth={tileWidth}
+              tileHeight={tileHeight}
+              paths={transform(paths)}
+              strokeWidth={strokeWidth}
+            />
+          </div>
+        </Pinchable>
       </div>
     );
   }
