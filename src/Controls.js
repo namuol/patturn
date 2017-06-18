@@ -4,6 +4,7 @@ import {View, Touchable, StyleSheet} from 'react-primitives';
 import chroma from 'chroma-js';
 import materialPalette from 'material-palette';
 import {compose} from 'ramda';
+import {pure} from 'recompose';
 
 import {cadence} from './theme';
 import type {Component, Color, Tool} from './types';
@@ -528,7 +529,7 @@ const mapDispatchToProps = (dispatch, ownProps: RequiredProps): Handlers => {
 type Props = RequiredProps & Handlers & {
   state: State,
 };
-const PureControls = (props: Props) => {
+const PureControls = pure((props: Props) => {
   const {
     color,
     strokeWidth,
@@ -591,7 +592,7 @@ const PureControls = (props: Props) => {
         <ColorDropdown onChange={handleColorChanged} color={color} />}
     </View>
   );
-};
+});
 const Controls: Component<RequiredProps> = compose(
   withInternalReducer(getReducer, mapStateToProps, mapDispatchToProps),
 )(PureControls);

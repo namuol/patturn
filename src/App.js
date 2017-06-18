@@ -13,6 +13,9 @@ import * as transforms from './wallpaperGroupTransforms';
 
 import type {Path, Point, Provider, Component, Color, Tool} from './types';
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 10;
+
 const getCoordShiftAmount = (value, size) => -Math.floor(value / size) * size;
 
 const getTileCoordFromPageCoord = (
@@ -106,7 +109,6 @@ type TileProps = {
   paths: Array<Path>,
   tileHeight: number,
   tileWidth: number,
-  zoom: number,
   strokeWidth: number,
 };
 const Tile = pure(({
@@ -117,7 +119,6 @@ const Tile = pure(({
   paths,
   tileHeight,
   tileWidth,
-  zoom,
   strokeWidth,
 }: TileProps) => {
   const tilePaths = paths
@@ -221,7 +222,13 @@ const Canvas = pure(({
   strokeWidth,
 }: CanvasProps) => {
   return (
-    <svg viewBox={`0 0 ${viewBoxWidth / zoom} ${viewBoxHeight / zoom}`}>
+    <svg
+      style={{
+        transformOrigin: '0 0',
+        transform: `translate3d(0,0,0) scale(${zoom * 2})`,
+      }}
+      viewBox={`0 0 ${viewBoxWidth / MIN_ZOOM} ${viewBoxHeight / MIN_ZOOM}`}
+    >
       <Tile
         id="patturnTile"
         tileWidth={tileWidth}
@@ -230,12 +237,11 @@ const Canvas = pure(({
         mousePageY={mousePageY}
         mousePressed={mousePressed}
         paths={paths}
-        zoom={zoom}
         strokeWidth={strokeWidth}
       />
       <rect
-        width={viewBoxWidth / zoom}
-        height={viewBoxHeight / zoom}
+        width={viewBoxWidth / MIN_ZOOM}
+        height={viewBoxHeight / MIN_ZOOM}
         fill="url(#patturnTile)"
       />
     </svg>
@@ -492,7 +498,7 @@ export const reducer = (state: State = defaultState, action: Action) => {
     const {zoom} = state;
     return {
       ...state,
-      zoom: clamp(zoom - amount * (zoom * 0.002), 0.5, 10),
+      zoom: clamp(zoom - amount * (zoom * 0.002), MIN_ZOOM, MAX_ZOOM),
     };
   }
 
@@ -928,18 +934,6 @@ class PureApp extends React.Component {
           overflow: 'hidden',
         }}
       >
-        {!mousePressed &&
-          !pinching &&
-          <Controls
-            tool={tool}
-            color={color}
-            strokeWidth={strokeWidth}
-            dispatch={dispatch}
-            onColorChanged={handleColorChanged}
-            onStrokeWidthChanged={handleStrokeWidthChanged}
-            canUndo={canUndo}
-            canRedo={canRedo}
-          />}
         <Pinchable
           onKeyDown={false}
           onKeyUp={false}
@@ -985,6 +979,17 @@ class PureApp extends React.Component {
             />
           </div>
         </Pinchable>
+        {!mousePressed &&
+          <Controls
+            tool={tool}
+            color={color}
+            strokeWidth={strokeWidth}
+            dispatch={dispatch}
+            onColorChanged={handleColorChanged}
+            onStrokeWidthChanged={handleStrokeWidthChanged}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />}
       </div>
     );
   }
