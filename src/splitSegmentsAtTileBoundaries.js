@@ -7,9 +7,11 @@ type Params = {
   tileHeight: number,
 };
 
-const crossesGrid = (v1, v2, size) => {
-  const cell1 = Math.floor(v1 / size);
-  const cell2 = Math.floor(v2 / size);
+const crossesGrid = (v1, v2, size, strokeWidth) => {
+  const min = Math.min(v1, v2) - strokeWidth;
+  const max = Math.max(v1, v2) + strokeWidth;
+  const cell1 = Math.floor(min / size);
+  const cell2 = Math.floor(max / size);
   return cell1 !== cell2;
 };
 
@@ -27,7 +29,10 @@ const splitPathAtTileBoundaries = (
     const {x: x1, y: y1} = lastPoint;
     const {x: x2, y: y2} = point;
 
-    if (crossesGrid(x1, x2, tileWidth) || crossesGrid(y1, y2, tileHeight)) {
+    if (
+      crossesGrid(x1, x2, tileWidth, strokeWidth) ||
+      crossesGrid(y1, y2, tileHeight, strokeWidth)
+    ) {
       paths.push(
         {
           points: [lastPoint, point],
