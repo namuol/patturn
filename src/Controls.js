@@ -27,6 +27,9 @@ const styles = StyleSheet.create({
   selected: {
     borderColor: '#000',
   },
+  pressed: {
+    backgroundColor: '#ddd',
+  },
   disabled: {
     opacity: 0.25,
   },
@@ -93,23 +96,86 @@ const stop = fn =>
     fn && fn(e);
   };
 
+const setPressed = state => {
+  return {...state, pressed: true};
+};
+
+const setNotPressed = state => {
+  return {...state, pressed: false};
+};
+
 type ControlProps = {
+  onPressIn?: (*) => void,
+  onPressOut?: (*) => void,
   onPress?: (*) => void,
   icon: any,
   selected?: boolean,
   disabled?: boolean,
 };
-const Control = (props: ControlProps) => {
-  return (
-    <Touchable onPressIn={props.disabled ? noop : stop(props.onPress)}>
-      <View style={[styles.control, props.selected && styles.selected]}>
-        <View style={props.disabled && styles.disabled}>
-          {props.icon}
+class Control extends React.Component {
+  state = {
+    pressed: false,
+  };
+
+  props: ControlProps;
+
+  handlePressIn = e => {
+    e && e.preventDefault && e.preventDefault();
+    e && e.stopPropagation && e.stopPropagation();
+    this.setState(setPressed);
+
+    const {onPressIn} = this.props;
+    if (onPressIn) {
+      onPressIn(e);
+    }
+  };
+
+  handlePressOut = e => {
+    e && e.preventDefault && e.preventDefault();
+    e && e.stopPropagation && e.stopPropagation();
+
+    this.setState(setNotPressed);
+    const {onPressOut} = this.props;
+    if (onPressOut) {
+      onPressOut(e);
+    }
+  };
+
+  handlePress = e => {
+    e && e.preventDefault && e.preventDefault();
+    e && e.stopPropagation && e.stopPropagation();
+
+    this.setState(setNotPressed);
+    const {onPress} = this.props;
+    if (onPress) {
+      onPress(e);
+    }
+  };
+
+  render() {
+    const props = this.props;
+    const state = this.state;
+    return (
+      <Touchable
+        onPressIn={props.disabled ? noop : this.handlePressIn}
+        onPressOut={props.disabled ? noop : this.handlePressOut}
+        onPress={props.disabled ? noop : this.handlePress}
+      >
+        <View
+          style={[
+            styles.control,
+            props.selected && styles.selected,
+            state.pressed && styles.pressed,
+          ]}
+        >
+          <View style={props.disabled && styles.disabled}>
+            {props.icon}
+          </View>
         </View>
-      </View>
-    </Touchable>
-  );
-};
+      </Touchable>
+    );
+  }
+}
 const getToolDropdownHandler = onChange => // $FlowFixMe
   !onChange ? noop : tool => () => onChange(tool);
 const TOOLS = {
@@ -379,7 +445,6 @@ const getReducer = () =>
     if (
       action.type === 'OVERLAY_PRESSED' ||
       action.type === 'TOOL_CHANGED' ||
-      action.type === 'COLOR_CHANGED' ||
       action.type === 'STROKE_WIDTH_CHANGED'
     ) {
       return {

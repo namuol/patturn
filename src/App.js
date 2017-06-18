@@ -227,15 +227,6 @@ const Tile = pure(({
           );
         }
       })}
-
-      <TileableCircle
-        cx={tileMouseX}
-        cy={tileMouseY}
-        r={strokeWidth / 2}
-        fill={mousePressed ? 'red' : 'rgba(0,0,0,0.2)'}
-        tileWidth={tileWidth}
-        tileHeight={tileHeight}
-      />
     </pattern>
   );
 });
@@ -312,7 +303,6 @@ type State = {
 const keyMap: {
   [key: string]: string,
 } = {
-  alt: 'TOGGLE_SIZING_STROKEWIDTH',
   l: 'SET_LINE_MODE',
   p: 'SET_PEN_MODE',
   z: 'UNDO',
@@ -581,13 +571,6 @@ export const reducer = (state: State = defaultState, action: Action) => {
   }
 
   if (action.type === 'KEY_PRESSED') {
-    if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
-      return {
-        ...state,
-        sizingStrokeWidth: true,
-      };
-    }
-
     if (action.payload === 'SET_PEN_MODE') {
       return {...state, tool: 'pen'};
     }
@@ -602,15 +585,6 @@ export const reducer = (state: State = defaultState, action: Action) => {
 
     if (action.payload === 'REDO') {
       return redo(state);
-    }
-  }
-
-  if (action.type === 'KEY_RELEASED') {
-    if (action.payload === 'TOGGLE_SIZING_STROKEWIDTH') {
-      return {
-        ...state,
-        sizingStrokeWidth: false,
-      };
     }
   }
 
