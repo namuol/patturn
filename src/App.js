@@ -9,7 +9,7 @@ import {pure} from 'recompose';
 import Pinchable from 'react-tappable/lib/Pinchable';
 
 import splitSegmentsAtTileBoundaries from './splitSegmentsAtTileBoundaries';
-import * as transforms from './wallpaperGroupTransforms';
+import * as transformConfigs from './wallpaperGroupTransforms';
 
 import type {Path, Point, Provider, Component, Color, Tool} from './types';
 
@@ -103,23 +103,15 @@ const TilablePolyline = pure(({
 
 type TileProps = {
   id: string,
-  mousePageX: number,
-  mousePageY: number,
-  mousePressed: boolean,
   paths: Array<Path>,
   tileHeight: number,
   tileWidth: number,
-  strokeWidth: number,
 };
 const Tile = pure(({
   id,
-  mousePageX,
-  mousePageY,
-  mousePressed,
   paths,
   tileHeight,
   tileWidth,
-  strokeWidth,
 }: TileProps) => {
   const tilePaths = paths
     .reduce(
@@ -206,7 +198,6 @@ type CanvasProps = {
   mousePageX: number,
   mousePageY: number,
   mousePressed: boolean,
-  strokeWidth: number,
 };
 
 const Canvas = pure(({
@@ -219,7 +210,6 @@ const Canvas = pure(({
   tileHeight,
   paths,
   zoom,
-  strokeWidth,
 }: CanvasProps) => {
   return (
     <svg
@@ -237,7 +227,6 @@ const Canvas = pure(({
         mousePageY={mousePageY}
         mousePressed={mousePressed}
         paths={paths}
-        strokeWidth={strokeWidth}
       />
       <rect
         width={viewBoxWidth / MIN_ZOOM}
@@ -263,7 +252,7 @@ type State = {
   zoom: number,
   zoomWhenPinchStarted: number,
   pinching: boolean,
-  transformType: $Keys<typeof transforms>,
+  transformType: $Keys<typeof transformConfigs>,
   sizingStrokeWidth: boolean,
   smoothFactor: number,
   color: Color,
@@ -281,7 +270,7 @@ const keyMap: {
 
 type MappedKey = $Keys<typeof keyMap>;
 
-type Action =
+export type Action =
   | {
       type: 'MOUSE_MOVED',
       payload: {
@@ -310,7 +299,12 @@ type Action =
   | {type: 'STROKE_WIDTH_CHANGED', payload: number}
   | {type: 'TOOL_CHANGED', payload: Tool}
   | {type: 'UNDO'}
-  | {type: 'REDO'};
+  | {type: 'REDO'}
+  | {type: 'UNDO_CONTROL_PRESSED'}
+  | {type: 'REDO_CONTROL_PRESSED'}
+  | {type: 'PINCH_STARTED'}
+  | {type: 'PINCH_MOVED', payload: {zoomMultiple: number}}
+  | {type: 'PINCH_ENDED'};
 
 import {BASECOLORS} from './Controls';
 const defaultState: State = {
@@ -383,7 +377,7 @@ const redo = (state: State) => {
   };
 };
 
-export const reducer = (state: State = defaultState, action: Action) => {
+export const reducer = (state: State = defaultState, action: Action): State => {
   if (action.type === 'MOUSE_MOVED') {
     const {paths, zoom} = state;
     const {
@@ -630,7 +624,7 @@ type AppStateMappedProps = {
   canRedo: boolean,
 };
 
-const getLODSnappedZoom = ({zoom}: State) => 1;
+const getLODSnappedZoom = (state: State) => 1;
 
 const getSmoothedPaths = ({paths}: State) => paths.map(smoothPath);
 
@@ -660,6 +654,26 @@ const getSimplifiedPaths = createSelector(
   },
 );
 
+//
+// TODO: Snap to a hexagonal grid (or whatever the current lattice type is):
+//
+// const snapPoint = ({x, y, ...rest}) => ({
+//   x: Math.round(x / 10) * 10,
+//   y: Math.round(y / 10) * 10,
+//   ...rest,
+// });
+//
+// const snapPath = path => ({
+//   ...path,
+//   points: path.points.map(snapPoint),
+// });
+//
+// const getSnappedPaths = createSelector(
+//   ({paths}) => paths,
+//   paths => paths.map(snapPath),
+// );
+//
+
 const mapStateToProps = (state: State): AppStateMappedProps => {
   const canUndo = state.history.past.length > 0;
   const canRedo = state.history.future.length > 0;
@@ -674,8 +688,10 @@ const mapStateToProps = (state: State): AppStateMappedProps => {
   };
 };
 
+export type Dispatcher = (Action) => void;
+
 type AppHandlers = {
-  dispatch: (*) => *,
+  dispatch: Dispatcher,
   handleTouchStart: (e: SyntheticTouchEvent) => void,
   handleTouchMove: (e: SyntheticTouchEvent) => void,
   handleTouchEnd: (e: SyntheticTouchEvent) => void,
@@ -689,18 +705,21 @@ type AppHandlers = {
   handleColorChanged: (color: Color) => void,
   handleStrokeWidthChanged: (strokeWidth: number) => void,
   handlePinchStart: (e: Object) => void,
-  handlePinchMove: (e: Object) => void,
+  handlePinchMove: (e: {zoom: number}) => void,
   handlePinchEnd: (e: Object) => void,
 };
 
-const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
-  window.dispatch = dispatch;
+const mapDispatchToProps = (dispatch: Dispatcher): AppHandlers => {
   return {
     dispatch,
     handleTouchMove: (event: SyntheticTouchEvent) => {
       event.preventDefault();
 
-      const {changedTouches: [{pageX, pageY}]} = event;
+      const {
+        changedTouches: [{pageX, pageY}],
+      }: {
+        changedTouches: [{pageX: number, pageY: number}],
+      } = event;
       dispatch({
         type: 'MOUSE_MOVED',
         payload: {
@@ -712,7 +731,11 @@ const mapDispatchToProps = (dispatch: (*) => *): AppHandlers => {
     handleTouchStart: (event: SyntheticTouchEvent) => {
       event.preventDefault();
 
-      const {changedTouches: [{pageX, pageY}]} = event;
+      const {
+        changedTouches: [{pageX, pageY}],
+      }: {
+        changedTouches: [{pageX: number, pageY: number}],
+      } = event;
       dispatch({
         type: 'MOUSE_PRESSED',
         payload: {
@@ -831,7 +854,7 @@ const withViewBoxDimensions: Provider<ViewBoxProps> = <VBRP: Object>(
       viewBoxHeight: 0,
     };
 
-    __setViewBoxDimensions = debounce(
+    __setViewBoxDimensions: () => void = debounce(
       () => {
         const element = ReactDOM.findDOMNode(this);
 
@@ -855,12 +878,12 @@ const withViewBoxDimensions: Provider<ViewBoxProps> = <VBRP: Object>(
     );
 
     componentDidMount() {
-      window.addEventListener('resize', this.__setViewBoxDimensions);
+      addEventListener('resize', this.__setViewBoxDimensions);
       this.__setViewBoxDimensions();
     }
 
     componentWillUnmount() {
-      window.removeEventListener('resize', this.__setViewBoxDimensions);
+      removeEventListener('resize', this.__setViewBoxDimensions);
     }
 
     render() {
@@ -904,7 +927,6 @@ class PureApp extends React.Component {
         mousePageX,
         mousePageY,
         mousePressed,
-        pinching,
         paths,
         zoom,
         transformType,
@@ -918,13 +940,16 @@ class PureApp extends React.Component {
       viewBoxHeight,
     } = this.props;
 
-    const transformBuilder = transforms[transformType];
+    const {
+      createTransformer,
+      getTileDimensions,
+    } = transformConfigs[transformType];
     const {
       tileWidth,
       tileHeight,
-    } = transformBuilder.getTileDimensions(tileSize);
+    } = getTileDimensions(tileSize);
 
-    const transform = transforms[transformType](tileWidth, tileHeight);
+    const transform = createTransformer(tileWidth, tileHeight);
 
     return (
       <div

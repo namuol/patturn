@@ -8,9 +8,10 @@ import {pure} from 'recompose';
 
 import {cadence} from './theme';
 import type {Component, Color, Tool} from './types';
+import type {Dispatcher, Action} from './App';
 import withInternalReducer from './withInternalReducer';
 
-const noop: (*) => * = () => {};
+const noop: (*) => void = () => {};
 
 const styles = StyleSheet.create({
   control: {
@@ -90,19 +91,28 @@ const styles = StyleSheet.create({
   },
 });
 
-const setPressed = state => {
+type State = {
+  mode: 'default' | 'tool' | 'color' | 'strokeWidth',
+};
+
+const setPressed = (state: State) => {
   return {...state, pressed: true};
 };
 
-const setNotPressed = state => {
+const setNotPressed = (state: State) => {
   return {...state, pressed: false};
 };
+
+type PressEvent = {
+  preventDefault?: () => void,
+  stopPropagation?: () => void,
+}
 
 type ControlProps = {
   onPressIn?: (*) => void,
   onPressOut?: (*) => void,
   onPress?: (*) => void,
-  icon: any,
+  icon: *,
   selected?: boolean,
   disabled?: boolean,
 };
@@ -113,7 +123,7 @@ class Control extends React.Component {
 
   props: ControlProps;
 
-  handlePressIn = e => {
+  handlePressIn = (e: PressEvent) => {
     e && e.preventDefault && e.preventDefault();
     e && e.stopPropagation && e.stopPropagation();
     this.setState(setPressed);
@@ -124,7 +134,7 @@ class Control extends React.Component {
     }
   };
 
-  handlePressOut = e => {
+  handlePressOut = (e: PressEvent) => {
     e && e.preventDefault && e.preventDefault();
     e && e.stopPropagation && e.stopPropagation();
 
@@ -135,7 +145,7 @@ class Control extends React.Component {
     }
   };
 
-  handlePress = e => {
+  handlePress = (e: PressEvent) => {
     e && e.preventDefault && e.preventDefault();
     e && e.stopPropagation && e.stopPropagation();
 
@@ -278,7 +288,7 @@ const SHADE_OVERRIDES = {
   '#000000': ['#ffffff', '#E0E0E0', '#9E9E9E', '#000000'],
 };
 const SHADEKEYS = ['100', '300', '500', '900'];
-const SHADES = BASECOLORS.reduce(
+const SHADES: {[string]: Array<string>} = BASECOLORS.reduce(
   (shades, baseColor) => {
     // $FlowFixMe
     const overriddenShades = SHADE_OVERRIDES[baseColor];
@@ -292,28 +302,20 @@ const SHADES = BASECOLORS.reduce(
     if (!h) {
       h = 0;
     }
-    const palette = materialPalette({
+    const baseColorHSL = {
       h,
       s: s * 100,
       l: l * 100,
-    });
-    palette['500'] = baseColor;
+    };
+    const palette = materialPalette(baseColorHSL);
+    palette['500'] = baseColorHSL;
     return {
       ...shades,
+      // $FlowFixMe
       [baseColor]: SHADEKEYS.map(key => palette[key])
-        .filter(v => {
-          if (typeof v === 'string') {
-            return true;
-          }
-          return typeof h === 'number' &&
-            typeof s === 'number' &&
-            typeof l === 'number';
-        })
+        .filter(v => Boolean(v))
         .reduce(
-          (results, v) => {
-            if (typeof v === 'string') {
-              return results.concat(v);
-            }
+          (results: Array<string>, v) => {
             const {h, s, l} = v;
             return results.concat(chroma.hsl(h, s / 100, l / 100).hex());
           },
@@ -323,8 +325,8 @@ const SHADES = BASECOLORS.reduce(
   },
   {},
 );
-const SHADESMAP = Object.keys(SHADES).reduce(
-  (shadeMap, baseColor) => {
+const SHADESMAP: {[string]: string} = Object.keys(SHADES).reduce(
+  (shadeMap: {[string]: string}, baseColor) => {
     return {
       ...shadeMap,
       [baseColor]: baseColor,
@@ -345,8 +347,15 @@ const getSelectedBaseColor = (color: Color) => {
   }
   return SHADESMAP[color];
 };
-const getColorChangedHandler = onChange => // $FlowFixMe
-  !onChange ? noop : color => () => onChange(color);
+const getColorChangedHandler = (onChange?: (string) => void) => (color) => {
+  if (typeof onChange === 'function') {
+    onChange(color);
+    return;
+  } else {
+    return noop;
+  }
+}
+
 type ColorDropdownProps = {
   color: Color,
   onChange?: (color: Color) => any,
@@ -355,7 +364,7 @@ const ColorDropdown = (props: ColorDropdownProps) => {
   const {onChange} = props;
   const selectedBaseColor = getSelectedBaseColor(props.color);
   let selectedShadeIndex = 3;
-  const shades = SHADES[selectedBaseColor].map((shade, idx) => {
+  const shades: Array<React$Element<*>> = SHADES[selectedBaseColor].map((shade: string, idx) => {
     const selected = shade === props.color;
     if (selected) {
       selectedShadeIndex = idx;
@@ -403,21 +412,18 @@ type RequiredProps = {
   color: Color,
   strokeWidth: number,
   tool: Tool,
-  onToolChanged?: (tool: Tool) => *,
-  onStrokeWidthChanged?: (strokeWidth: number) => *,
-  onColorChanged?: (color: Color) => *,
-  dispatch?: (*) => *,
+  onToolChanged?: (tool: Tool) => void,
+  onStrokeWidthChanged?: (strokeWidth: number) => void,
+  onColorChanged?: (color: Color) => void,
+  dispatch?: Dispatcher,
   canUndo: boolean,
   canRedo: boolean,
-};
-type State = {
-  mode: 'default' | 'tool' | 'color' | 'strokeWidth',
 };
 const defaultState: State = {
   mode: 'default',
 };
 const getReducer = () =>
-  (state: State = defaultState, action): State => {
+  (state: State = defaultState, action: Action): State => {
     if (action.type === 'TOOL_CONTROL_PRESSED') {
       return {
         ...state,

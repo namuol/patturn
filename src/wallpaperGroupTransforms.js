@@ -9,7 +9,17 @@ type TransformerFactory = (
   tileHeight: number,
 ) => Transformer;
 
-const getHexagonalTileDimensions = (
+type TileDimensionGetter = (tileSize: number) => {
+  tileWidth: number,
+  tileHeight: number,
+};
+
+type TransformerConfiguration = {
+  createTransformer: TransformerFactory,
+  getTileDimensions: TileDimensionGetter,
+};
+
+const getHexagonalTileDimensions: TileDimensionGetter = (
   tileSize: number,
 ): {tileWidth: number, tileHeight: number} => {
   return {
@@ -18,7 +28,7 @@ const getHexagonalTileDimensions = (
   };
 };
 
-const getSquareTileDimensions = (
+const getSquareTileDimensions: TileDimensionGetter = (
   tileSize: number,
 ): {tileWidth: number, tileHeight: number} => {
   return {
@@ -28,11 +38,13 @@ const getSquareTileDimensions = (
 };
 
 // https://en.wikipedia.org/wiki/Wallpaper_group#Group_p1_.28o.29
-export const p1: TransformerFactory = () =>
-  (paths: Array<Path>) => {
-    return paths;
-  };
-p1.getTileDimensions = getSquareTileDimensions;
+export const p1: TransformerConfiguration = {
+  createTransformer: () =>
+    (paths: Array<Path>) => {
+      return paths;
+    },
+  getTileDimensions: getSquareTileDimensions,
+};
 
 const makePathTransformer = transform =>
   (path: Path) => ({
@@ -40,7 +52,7 @@ const makePathTransformer = transform =>
     points: path.points.map(transform),
   });
 
-const makeMatrixTransformer = matrices => {
+const makeMatrixTransformer = (matrices: Array<Matrix>) => {
   const pathTransformers = matrices.map(matrix =>
     makePathTransformer(({x, y}: Point) => {
       const [x2, y2] = matrix.transformPoint(x, y);
@@ -59,44 +71,48 @@ const makeMatrixTransformer = matrices => {
   };
 };
 
-export const p2: TransformerFactory = (tileWidth, tileHeight) => {
-  const matrix = new Matrix()
-    .translate(tileWidth / 2, tileHeight / 2)
-    .rotate(Math.PI)
-    .translate(-tileWidth / 2, -tileHeight / 2);
+export const p2: TransformerConfiguration = {
+  createTransformer: (tileWidth, tileHeight) => {
+    const matrix = new Matrix()
+      .translate(tileWidth / 2, tileHeight / 2)
+      .rotate(Math.PI)
+      .translate(-tileWidth / 2, -tileHeight / 2);
 
-  return makeMatrixTransformer([matrix]);
+    return makeMatrixTransformer([matrix]);
+  },
+  getTileDimensions: getSquareTileDimensions,
 };
-p2.getTileDimensions = getSquareTileDimensions;
 
 const TAU = Math.PI * 2;
 
 const OY = 1.5;
 const OX = 1 / 2;
 
-export const p3: TransformerFactory = (tileWidth, tileHeight) => {
-  const matrices = [
-    new Matrix()
-      .translate(tileWidth / 2, tileHeight / 2)
-      .rotate(TAU / 3)
-      .translate(-tileWidth / 2, -tileHeight / 2),
-    new Matrix()
-      .translate(tileWidth / 2, tileHeight / 2)
-      .rotate(TAU / 3 * 2)
-      .translate(-tileWidth / 2, -tileHeight / 2),
-    new Matrix().translate(tileWidth * OX, tileHeight * OY),
-    new Matrix()
-      .translate(tileWidth * OX, tileHeight * OY)
-      .translate(tileWidth / 2, tileHeight / 2)
-      .rotate(TAU / 3)
-      .translate(-tileWidth / 2, -tileHeight / 2),
-    new Matrix()
-      .translate(tileWidth * OX, tileHeight * OY)
-      .translate(tileWidth / 2, tileHeight / 2)
-      .rotate(TAU / 3 * 2)
-      .translate(-tileWidth / 2, -tileHeight / 2),
-  ];
+export const p3: TransformerConfiguration = {
+  createTransformer: (tileWidth, tileHeight) => {
+    const matrices = [
+      new Matrix()
+        .translate(tileWidth / 2, tileHeight / 2)
+        .rotate(TAU / 3)
+        .translate(-tileWidth / 2, -tileHeight / 2),
+      new Matrix()
+        .translate(tileWidth / 2, tileHeight / 2)
+        .rotate(TAU / 3 * 2)
+        .translate(-tileWidth / 2, -tileHeight / 2),
+      new Matrix().translate(tileWidth * OX, tileHeight * OY),
+      new Matrix()
+        .translate(tileWidth * OX, tileHeight * OY)
+        .translate(tileWidth / 2, tileHeight / 2)
+        .rotate(TAU / 3)
+        .translate(-tileWidth / 2, -tileHeight / 2),
+      new Matrix()
+        .translate(tileWidth * OX, tileHeight * OY)
+        .translate(tileWidth / 2, tileHeight / 2)
+        .rotate(TAU / 3 * 2)
+        .translate(-tileWidth / 2, -tileHeight / 2),
+    ];
 
-  return makeMatrixTransformer(matrices);
+    return makeMatrixTransformer(matrices);
+  },
+  getTileDimensions: getHexagonalTileDimensions,
 };
-p3.getTileDimensions = getHexagonalTileDimensions;

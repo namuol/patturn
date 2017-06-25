@@ -4,6 +4,7 @@
 [ignore]
 .*/node_modules/animated/.*
 .*/node_modules/react-native-web/.*
+.*/node_modules/bs-platform/jscomp/docgen.json
 
 [include]
 

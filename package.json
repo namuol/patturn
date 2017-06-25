@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "chroma-js": "^1.3.3",
+    "flow-typed": "^2.1.2",
     "immutable": "^3.8.1",
     "lodash.debounce": "^4.0.8",
     "material-palette": "^1.0.0",
@@ -13,6 +14,8 @@
     "react-primitives": "^0.4.2",
     "react-redux": "^5.0.5",
     "react-tappable": "^1.0.0",
+    "reason-js": "^0.3.0",
+    "reason-react": "^0.1.5",
     "recompose": "^0.23.5",
     "redux": "^3.6.0",
     "reselect": "^3.0.1",
@@ -21,6 +24,7 @@
   },
   "devDependencies": {
     "@kadira/storybook": "^2.21.0",
+    "bs-platform": "^1.7.5",
     "flow-bin": "^0.47.0",
     "husky": "^0.13.3",
     "lint-staged": "^3.4.0",
@@ -36,7 +40,10 @@
     "storybook": "start-storybook -p 9009 -s public",
     "build-storybook": "build-storybook -s public",
     "precommit": "lint-staged",
-    "deploy": "npm run build && cd build && rm static/js/*.map && echo {\\\"alias\\\": \\\"patturn.now.sh\\\"} > now.json && now && now ln"
+    "deploy": "npm run build && cd build && rm static/js/*.map && echo {\\\"alias\\\": \\\"patturn.now.sh\\\"} > now.json && now && now ln",
+    "buckle:up": "bsb -make-world -w",
+    "buckle:clean": "bsb -clean-world",
+    "update-flow-types": "flow-typed install"
   },
   "lint-staged": {
     "*.js": [
