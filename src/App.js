@@ -618,19 +618,45 @@ const smoothPath = (path: Path) => {
 import simplify from 'simplify-js';
 import {createSelector} from 'reselect';
 
+type AppRequiredProps = {
+  tileSize: number,
+};
+
 type AppStateMappedProps = {
   state: State,
+  tileWidth: number,
+  tileHeight: number,
   canUndo: boolean,
   canRedo: boolean,
 };
+
+const getTileSize = (state: State, {tileSize}: AppRequiredProps) => tileSize;
+
+const getTransformConfig = ({transformType}: State) => {
+  return transformConfigs[transformType];
+};
+
+const getTileDimensions = createSelector(
+  [getTransformConfig, getTileSize],
+  (transformConfig, tileSize) => {
+    const {
+      tileWidth,
+      tileHeight,
+    } = transformConfig.getTileDimensions(tileSize);
+
+    return {
+      tileWidth,
+      tileHeight,
+    };
+  },
+);
 
 const getLODSnappedZoom = (state: State) => 1;
 
 const getSmoothedPaths = ({paths}: State) => paths.map(smoothPath);
 
 const getSimplifiedPaths = createSelector(
-  getSmoothedPaths,
-  getLODSnappedZoom,
+  [getSmoothedPaths, getLODSnappedZoom],
   (smoothedPaths, zoom) => {
     const simplifyPath = ({points, ...rest}) => {
       if (points.length < 2) {
@@ -654,35 +680,31 @@ const getSimplifiedPaths = createSelector(
   },
 );
 
-//
-// TODO: Snap to a hexagonal grid (or whatever the current lattice type is):
-//
-// const snapPoint = ({x, y, ...rest}) => ({
-//   x: Math.round(x / 10) * 10,
-//   y: Math.round(y / 10) * 10,
-//   ...rest,
-// });
-//
-// const snapPath = path => ({
-//   ...path,
-//   points: path.points.map(snapPoint),
-// });
-//
-// const getSnappedPaths = createSelector(
-//   ({paths}) => paths,
-//   paths => paths.map(snapPath),
-// );
-//
+const getGridSnapper = createSelector(
+  [getTransformConfig, getTileSize],
+  (transformConfig, tileSize) => {
+    return transformConfig.createGridSnapper(tileSize / 5);
+  },
+);
 
-const mapStateToProps = (state: State): AppStateMappedProps => {
+const getSnappedPaths = createSelector(
+  [getGridSnapper, getSimplifiedPaths],
+  (gridSnapper, paths) => gridSnapper(paths),
+);
+
+const mapStateToProps = (
+  state: State,
+  props: AppRequiredProps,
+): AppStateMappedProps => {
   const canUndo = state.history.past.length > 0;
   const canRedo = state.history.future.length > 0;
 
   return {
     state: {
       ...state,
-      paths: getSimplifiedPaths(state),
+      paths: getSnappedPaths(state, props),
     },
+    ...getTileDimensions(state, props),
     canUndo,
     canRedo,
   };
@@ -895,10 +917,6 @@ const withViewBoxDimensions: Provider<ViewBoxProps> = <VBRP: Object>(
   return ViewBoxProvider;
 };
 
-type AppRequiredProps = {
-  tileSize: number,
-};
-
 type Props = AppRequiredProps & AppHandlers & ViewBoxProps & AppStateMappedProps;
 
 import Controls from './Controls';
@@ -921,7 +939,6 @@ class PureApp extends React.Component {
       handlePinchStart,
       handlePinchMove,
       handlePinchEnd,
-      tileSize,
       dispatch,
       state: {
         mousePageX,
@@ -934,6 +951,8 @@ class PureApp extends React.Component {
         strokeWidth,
         color,
       },
+      tileWidth,
+      tileHeight,
       canUndo,
       canRedo,
       viewBoxWidth,
@@ -942,12 +961,7 @@ class PureApp extends React.Component {
 
     const {
       createTransformer,
-      getTileDimensions,
     } = transformConfigs[transformType];
-    const {
-      tileWidth,
-      tileHeight,
-    } = getTileDimensions(tileSize);
 
     const transform = createTransformer(tileWidth, tileHeight);
 

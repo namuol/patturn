@@ -106,7 +106,7 @@ const setNotPressed = (state: State) => {
 type PressEvent = {
   preventDefault?: () => void,
   stopPropagation?: () => void,
-}
+};
 
 type ControlProps = {
   onPressIn?: (*) => void,
@@ -310,8 +310,7 @@ const SHADES: {[string]: Array<string>} = BASECOLORS.reduce(
     const palette = materialPalette(baseColorHSL);
     palette['500'] = baseColorHSL;
     return {
-      ...shades,
-      // $FlowFixMe
+      ...shades, // $FlowFixMe
       [baseColor]: SHADEKEYS.map(key => palette[key])
         .filter(v => Boolean(v))
         .reduce(
@@ -347,15 +346,14 @@ const getSelectedBaseColor = (color: Color) => {
   }
   return SHADESMAP[color];
 };
-const getColorChangedHandler = (onChange?: (string) => void) => (color) => {
-  if (typeof onChange === 'function') {
-    onChange(color);
-    return;
-  } else {
-    return noop;
-  }
-}
-
+const getColorChangedHandler = (onChange?: (string) => void) =>
+  color => {
+    return () => {
+      if (onChange !== undefined) {
+        onChange(color);
+      }
+    };
+  };
 type ColorDropdownProps = {
   color: Color,
   onChange?: (color: Color) => any,
@@ -364,7 +362,9 @@ const ColorDropdown = (props: ColorDropdownProps) => {
   const {onChange} = props;
   const selectedBaseColor = getSelectedBaseColor(props.color);
   let selectedShadeIndex = 3;
-  const shades: Array<React$Element<*>> = SHADES[selectedBaseColor].map((shade: string, idx) => {
+  const shades: Array<React$Element<*>> = SHADES[
+    selectedBaseColor
+  ].map((shade: string, idx) => {
     const selected = shade === props.color;
     if (selected) {
       selectedShadeIndex = idx;
